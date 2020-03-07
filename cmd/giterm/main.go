@@ -4,24 +4,24 @@ import (
 	"log"
 	"os"
 
-	"github.com/bharath-srinivas/giterm/modules"
 	"github.com/rivo/tview"
+
+	"github.com/bharath-srinivas/giterm/modules"
 )
 
 func main() {
-	app := tview.NewApplication()
-	gitApp := modules.New(app)
+	gitApp := modules.New(tview.NewApplication())
+	gitApp.LoadWidgets()
+	gitApp.LoadInputHandler()
 
-	grid := tview.NewGrid()
-	grid.SetRows()
-	grid.SetColumns(35)
-	grid.SetBorder(false)
+	flex := tview.NewFlex()
+	flex.SetBorder(false)
 
-	grid.AddItem(gitApp.ProfileWidget(), 0, 0, 1, 1, 0, 0, false)
-	grid.AddItem(gitApp.RepoWidget(), 0, 1, 1, 1, 0, 0, true)
+	flex.AddItem(gitApp.Widgets["profile"], 0, 1, true)
+	flex.AddItem(gitApp.Widgets["repositories"], 0, 5, false)
 
-	app.SetRoot(grid, true)
-	if err := app.Run(); err != nil {
+	gitApp.App.SetRoot(flex, true)
+	if err := gitApp.App.Run(); err != nil {
 		log.Println(err)
 		os.Exit(1)
 	}

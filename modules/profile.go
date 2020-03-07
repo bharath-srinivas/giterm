@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/google/go-github/v29/github"
 	"github.com/rivo/tview"
 )
 
@@ -33,7 +32,7 @@ func (g *GitApp) ProfileWidget() tview.Primitive {
 	widget.SetScrollable(true)
 	widget.SetTitle(string('\U0001F642') + " [green::b]Profile")
 
-	user, err := g.GetProfile()
+	user, _, err := g.Client.Users.Get(g.Context, "")
 	if err != nil {
 		_, _ = fmt.Fprint(widget, "")
 		return widget
@@ -63,9 +62,4 @@ func (g *GitApp) ProfileWidget() tview.Primitive {
 	_, _ = fmt.Fprintf(widget, "[gray::b]%s: [white]%d\n", "Private Gists", p.PrivateGists)
 
 	return widget
-}
-
-func (g *GitApp) GetProfile() (*github.User, error) {
-	user, _, err := g.Client.Users.Get(g.Context, "")
-	return user, err
 }

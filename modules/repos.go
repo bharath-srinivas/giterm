@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/google/go-github/v29/github"
 	"github.com/rivo/tview"
 )
 
@@ -35,9 +34,9 @@ func (g *GitApp) RepoWidget() tview.Primitive {
 	widget.SetBorders(true)
 	widget.SetTitle(string('\U0001F4D5') + " [green::b]Repositories")
 
-	repositories, err := g.GetRepositories()
+	repositories, _, err := g.Client.Repositories.List(g.Context, "", nil)
 	if err != nil {
-		widget.SetCellSimple(0, 0, err.Error())
+		widget.SetCellSimple(1, 0, err.Error())
 		return widget
 	}
 
@@ -53,24 +52,13 @@ func (g *GitApp) RepoWidget() tview.Primitive {
 		widget.SetCellSimple(row+1, 0, "[white::b]"+repo.Name)
 		widget.SetCellSimple(row+1, 1, "[white::b]"+repo.Description)
 		widget.SetCellSimple(row+1, 2, "[white::b]"+repo.Homepage)
-		//widget.SetCellSimple(row+1, 3, repo.DefaultBranch)
-		//widget.SetCellSimple(row+1, 4, repo.MasterBranch)
-		//widget.SetCellSimple(row+1, 5, repo.CloneURL)
 		widget.SetCellSimple(row+1, 3, "[white::b]"+repo.GitURL)
-		//widget.SetCellSimple(row+1, 7, repo.HTMLURL)
-		//widget.SetCellSimple(row+1, 8, repo.Language)
 		widget.SetCellSimple(row+1, 4, fmt.Sprintf("[white::b]%d", repo.StargazersCount))
 		widget.SetCellSimple(row+1, 5, fmt.Sprintf("[white::b]%d", repo.OpenIssuesCount))
 		widget.SetCellSimple(row+1, 6, fmt.Sprintf("[white::b]%d", repo.ForksCount))
-		//widget.SetCellSimple(row+1, 12, fmt.Sprintf("%d", repo.SubscribersCount))
 		widget.SetCellSimple(row+1, 7, fmt.Sprintf("[white::b]%d", repo.WatchersCount))
 	}
 	return widget
-}
-
-func (g *GitApp) GetRepositories() ([]*github.Repository, error) {
-	repos, _, err := g.Client.Repositories.List(g.Context, "", nil)
-	return repos, err
 }
 
 func setTableHeaders(widget *tview.Table) *tview.Table {
@@ -78,16 +66,10 @@ func setTableHeaders(widget *tview.Table) *tview.Table {
 		"[gray::b]Name",
 		"[gray::b]Description",
 		"[gray::b]Homepage",
-		//"[gray::b]DefaultBranch",
-		//"[gray::b]MasterBranch",
-		//"[gray::b]CloneURL",
-		//"[gray::b]HTMLURL",
 		"[gray::b]URL",
-		//"[gray::b]Language",
 		"[gray::b]Stargazers",
 		"[gray::b]Open Issues Count",
 		"[gray::b]Forks",
-		//"[gray::b]SubscribersCount",
 		"[gray::b]Watchers"}
 
 	for i, field := range headers {
