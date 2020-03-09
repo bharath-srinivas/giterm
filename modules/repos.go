@@ -8,24 +8,13 @@ import (
 )
 
 type repo struct {
-	Name             string `json:"name,omitempty"`
-	FullName         string `json:"full_name,omitempty"`
-	Description      string `json:"description,omitempty"`
-	Homepage         string `json:"homepage,omitempty"`
-	DefaultBranch    string `json:"default_branch,omitempty"`
-	MasterBranch     string `json:"master_branch,omitempty"`
-	HTMLURL          string `json:"html_url,omitempty"`
-	CloneURL         string `json:"clone_url,omitempty"`
-	GitURL           string `json:"git_url,omitempty"`
-	Language         string `json:"language,omitempty"`
-	Fork             bool   `json:"fork,omitempty"`
-	ForksCount       int    `json:"forks_count,omitempty"`
-	OpenIssuesCount  int    `json:"open_issues_count,omitempty"`
-	StargazersCount  int    `json:"stargazers_count,omitempty"`
-	SubscribersCount int    `json:"subscribers_count,omitempty"`
-	WatchersCount    int    `json:"watchers_count,omitempty"`
-	Archived         bool   `json:"archived,omitempty"`
-	Disabled         bool   `json:"disabled,omitempty"`
+	Name            string `json:"name,omitempty"`
+	Description     string `json:"description,omitempty"`
+	Homepage        string `json:"homepage,omitempty"`
+	GitURL          string `json:"git_url,omitempty"`
+	ForksCount      int    `json:"forks_count,omitempty"`
+	OpenIssuesCount int    `json:"open_issues_count,omitempty"`
+	StargazersCount int    `json:"stargazers_count,omitempty"`
 }
 
 func (g *GitApp) RepoWidget() tview.Primitive {
@@ -56,7 +45,6 @@ func (g *GitApp) RepoWidget() tview.Primitive {
 		widget.SetCellSimple(row+1, 4, fmt.Sprintf("[white::b]%d", repo.StargazersCount))
 		widget.SetCellSimple(row+1, 5, fmt.Sprintf("[white::b]%d", repo.OpenIssuesCount))
 		widget.SetCellSimple(row+1, 6, fmt.Sprintf("[white::b]%d", repo.ForksCount))
-		widget.SetCellSimple(row+1, 7, fmt.Sprintf("[white::b]%d", repo.WatchersCount))
 	}
 	return widget
 }
@@ -69,8 +57,7 @@ func setTableHeaders(widget *tview.Table) *tview.Table {
 		"[gray::b]URL",
 		"[gray::b]Stargazers",
 		"[gray::b]Open Issues Count",
-		"[gray::b]Forks",
-		"[gray::b]Watchers"}
+		"[gray::b]Forks"}
 
 	for i, field := range headers {
 		widget.SetCellSimple(0, i, field)
