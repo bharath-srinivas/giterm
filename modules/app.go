@@ -47,7 +47,7 @@ func New(app *tview.Application) *GitApp {
 		pages:   tview.NewPages(),
 		config:  cfg,
 	}
-	gitApp.GitAppPages = append(gitApp.GitAppPages, gitApp.ProfilePage(), gitApp.RepoPage())
+	gitApp.GitAppPages = append(gitApp.GitAppPages, gitApp.ProfilePage(), gitApp.RepoPage(), gitApp.FeedsPage())
 	for _, gitAppPage := range gitApp.GitAppPages {
 		gitApp.pages.AddPage(gitAppPage.Name, gitAppPage.Parent, true, false)
 	}
