@@ -9,7 +9,7 @@ import (
 	"github.com/bharath-srinivas/timeago"
 )
 
-func (g *GitApp) FeedsPage() *Page {
+func (c *Client) FeedsWidget() *Widget {
 	widget := tview.NewTextView()
 	widget.SetBorder(true)
 	widget.SetDynamicColors(true)
@@ -24,7 +24,7 @@ func (g *GitApp) FeedsPage() *Page {
 	eventTypes.SetSelectedFunc(func(text string, index int) {
 		go func() {
 			widget.Clear()
-			events, _, err := g.Client.Activity.ListEventsReceivedByUser(g.Context, "", false, &github.ListOptions{
+			events, _, err := c.client.Activity.ListEventsReceivedByUser(c.ctx, "", false, &github.ListOptions{
 				PerPage: 100,
 			})
 			if err != nil {
@@ -60,7 +60,8 @@ func (g *GitApp) FeedsPage() *Page {
 
 	eventTypes.SetCurrentOption(0)
 	widget.SetChangedFunc(func() {
-		g.App.Draw()
+		widget.ScrollToBeginning()
+		c.app.Draw()
 	})
 
 	flex := tview.NewFlex()
@@ -71,9 +72,8 @@ func (g *GitApp) FeedsPage() *Page {
 	flex.AddItem(eventTypes, 0, 1, false)
 	flex.AddItem(widget, 0, 7, false)
 
-	return &Page{
-		Name:            "Feeds",
-		Parent:          flex,
-		ChildComponents: []tview.Primitive{eventTypes, widget},
+	return &Widget{
+		Parent:   flex,
+		Children: []tview.Primitive{eventTypes, widget},
 	}
 }

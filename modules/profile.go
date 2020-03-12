@@ -25,17 +25,17 @@ type profile struct {
 	PrivateGists      int    `json:"private_gists,omitempty"`
 }
 
-func (g *GitApp) ProfilePage() *Page {
+func (c *Client) ProfileWidget() *Widget {
 	widget := tview.NewTextView()
 	widget.SetBorder(true)
 	widget.SetDynamicColors(true)
 	widget.SetScrollable(true)
 	widget.SetTitle(string('\U0001F642') + " [green::b]Profile")
 
-	user, _, err := g.Client.Users.Get(g.Context, "")
+	user, _, err := c.client.Users.Get(c.ctx, "")
 	if err != nil {
 		_, _ = fmt.Fprint(widget, "")
-		return &Page{}
+		return &Widget{}
 	}
 
 	var m map[string]interface{}
@@ -61,9 +61,5 @@ func (g *GitApp) ProfilePage() *Page {
 	_, _ = fmt.Fprintf(widget, "[gray::b]%s: [white]%d\n", "Total Private Repos", p.TotalPrivateRepos)
 	_, _ = fmt.Fprintf(widget, "[gray::b]%s: [white]%d\n", "Private Gists", p.PrivateGists)
 
-	return &Page{
-		Name:            "Profile",
-		Parent:          widget,
-		ChildComponents: nil,
-	}
+	return &Widget{Parent: widget}
 }
