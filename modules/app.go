@@ -87,6 +87,17 @@ func (g *GitApp) inputHandler(event *tcell.EventKey) *tcell.EventKey {
 	case tcell.KeyCtrlQ:
 		g.App.Stop()
 		return event
+	case tcell.KeyTab:
+		currentPage, _ := g.pages.GetFrontPage()
+		page := g.GetPage(currentPage)
+		if page != nil {
+			if len(page.ChildComponents) > 0 {
+				g.App.SetFocus(nextWidget(page.ChildComponents))
+			} else {
+				g.App.SetFocus(page.Parent)
+			}
+		}
+		return event
 	case tcell.KeyCtrlN:
 		pageCount := g.pages.GetPageCount()
 		currentPage, _ := g.pages.GetFrontPage()
@@ -109,4 +120,14 @@ func (g *GitApp) inputHandler(event *tcell.EventKey) *tcell.EventKey {
 		return event
 	}
 	return event
+}
+
+func nextWidget(widgets []tview.Primitive) tview.Primitive {
+	widgetLen := len(widgets)
+	for i := 0; i < widgetLen; i++ {
+		if widgets[i].GetFocusable().HasFocus() {
+			return widgets[(i+1)%widgetLen]
+		}
+	}
+	return widgets[0]
 }
