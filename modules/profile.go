@@ -14,7 +14,6 @@ type profile struct {
 	Blog              string `json:"blog,omitempty"`
 	Location          string `json:"location,omitempty"`
 	Email             string `json:"email,omitempty"`
-	Hireable          bool   `json:"hireable,omitempty"`
 	Bio               string `json:"bio,omitempty"`
 	PublicRepos       int    `json:"public_repos,omitempty"`
 	PublicGists       int    `json:"public_gists,omitempty"`
@@ -51,7 +50,6 @@ func (c *Client) ProfileWidget() *Widget {
 	_, _ = fmt.Fprintf(widget, "[gray::b]%s: [white]%s\n", "Blog", p.Blog)
 	_, _ = fmt.Fprintf(widget, "[gray::b]%s: [white]%s\n", "Location", p.Location)
 	_, _ = fmt.Fprintf(widget, "[gray::b]%s: [white]%s\n", "Email", p.Email)
-	_, _ = fmt.Fprintf(widget, "[gray::b]%s: [white]%v\n", "Hireable", p.Hireable)
 	_, _ = fmt.Fprintf(widget, "[gray::b]%s: [white]%s\n", "Bio", p.Bio)
 	_, _ = fmt.Fprintf(widget, "[gray::b]%s: [white]%d\n", "Public Repos", p.PublicRepos)
 	_, _ = fmt.Fprintf(widget, "[gray::b]%s: [white]%d\n", "Public Gists", p.PublicGists)
