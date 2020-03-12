@@ -11,12 +11,19 @@ import (
 	"github.com/bharath-srinivas/giterm/config"
 )
 
-type GitApp struct {
-	App     *tview.Application
-	Context context.Context
-	Client  *github.Client
-	Widgets map[string]tview.Primitive
+type Page struct {
+	Name            string
+	Parent          tview.Primitive
+	ChildComponents []tview.Primitive
+}
 
+type GitApp struct {
+	App         *tview.Application
+	Context     context.Context
+	Client      *github.Client
+	GitAppPages []*Page
+
+	pages  *tview.Pages
 	config config.Config
 }
 
@@ -31,18 +38,20 @@ func New(app *tview.Application) *GitApp {
 	httpClient := oauth2.NewClient(ctx, tokenSource)
 	client := github.NewClient(httpClient)
 
-	return &GitApp{
-		Context: ctx,
-		Client:  client,
+	gitApp := &GitApp{
 		App:     app,
-		Widgets: map[string]tview.Primitive{},
+		Client:  client,
+		Context: ctx,
+		pages:   tview.NewPages(),
 		config:  cfg,
 	}
-}
-
-func (g *GitApp) LoadWidgets() {
-	g.Widgets["profile"] = g.ProfileWidget()
-	g.Widgets["repositories"] = g.RepoWidget()
+	gitApp.GitAppPages = append(gitApp.GitAppPages, gitApp.ProfilePage(), gitApp.RepoPage())
+	for _, gitAppPage := range gitApp.GitAppPages {
+		gitApp.pages.AddPage(gitAppPage.Name, gitAppPage.Parent, true, false)
+	}
+	gitApp.pages.SwitchToPage(gitApp.GitAppPages[0].Name)
+	gitApp.App.SetRoot(gitApp.pages, true).SetFocus(gitApp.pages)
+	return gitApp
 }
 
 func (g *GitApp) LoadInputHandler() {
@@ -53,13 +62,6 @@ func (g *GitApp) handleInput(event *tcell.EventKey) *tcell.EventKey {
 	switch event.Key() {
 	case tcell.KeyCtrlQ:
 		g.App.Stop()
-		return event
-	case tcell.KeyTab:
-		if g.Widgets["profile"].GetFocusable().HasFocus() {
-			g.App.SetFocus(g.Widgets["repositories"])
-		} else {
-			g.App.SetFocus(g.Widgets["profile"])
-		}
 		return event
 	}
 	return event

@@ -17,7 +17,7 @@ type repo struct {
 	StargazersCount int    `json:"stargazers_count,omitempty"`
 }
 
-func (g *GitApp) RepoWidget() tview.Primitive {
+func (g *GitApp) RepoPage() *Page {
 	widget := tview.NewTable()
 	widget.SetBorder(true)
 	widget.SetBorders(true)
@@ -26,7 +26,7 @@ func (g *GitApp) RepoWidget() tview.Primitive {
 	repositories, _, err := g.Client.Repositories.List(g.Context, "", nil)
 	if err != nil {
 		widget.SetCellSimple(1, 0, err.Error())
-		return widget
+		return &Page{}
 	}
 
 	var m []map[string]interface{}
@@ -46,7 +46,11 @@ func (g *GitApp) RepoWidget() tview.Primitive {
 		widget.SetCellSimple(row+1, 5, fmt.Sprintf("[white::b]%d", repo.OpenIssuesCount))
 		widget.SetCellSimple(row+1, 6, fmt.Sprintf("[white::b]%d", repo.ForksCount))
 	}
-	return widget
+	return &Page{
+		Name:            "Repositories",
+		Parent:          widget,
+		ChildComponents: nil,
+	}
 }
 
 func setTableHeaders(widget *tview.Table) *tview.Table {
