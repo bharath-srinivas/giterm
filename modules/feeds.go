@@ -24,7 +24,7 @@ func (c *Client) FeedsWidget() *Widget {
 	eventTypes.SetSelectedFunc(func(text string, index int) {
 		go func() {
 			widget.Clear()
-			events, _, err := c.client.Activity.ListEventsReceivedByUser(c.ctx, "", false, &github.ListOptions{
+			events, _, err := c.client.Activity.ListEventsReceivedByUser(c.ctx, c.username, false, &github.ListOptions{
 				PerPage: 100,
 			})
 			if err != nil {
