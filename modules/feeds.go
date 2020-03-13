@@ -19,7 +19,7 @@ func (c *Client) FeedsWidget() *Widget {
 	eventTypes := tview.NewDropDown()
 	eventTypes.SetBorder(true)
 	eventTypes.SetLabel("Filter by: ")
-	eventTypes.SetOptions([]string{"CreateEvent", "ForkEvent", "StarEvent"}, nil)
+	eventTypes.SetOptions([]string{"AllEvents", "CreateEvent", "ForkEvent", "StarEvent"}, nil)
 
 	eventTypes.SetSelectedFunc(func(text string, index int) {
 		go func() {
@@ -39,20 +39,11 @@ func (c *Client) FeedsWidget() *Widget {
 
 			for _, event := range events {
 				if index > -1 && *event.Type == text {
-					switch *event.Type {
-					case "CreateEvent":
-						time := timeago.NoMax(timeago.English).Format(event.GetCreatedAt())
-						_, _ = fmt.Fprintf(widget, "[::b]%s [::d]created a repository [::b]%s [gray::d]%s\n", event.Actor.GetLogin(), event.Repo.GetName(), time)
-					case "ForkEvent":
-						payload, _ := event.ParsePayload()
-						time := timeago.NoMax(timeago.English).Format(event.GetCreatedAt())
-						_, _ = fmt.Fprintf(widget, "[::b]%s [::d]forked [::b]%s [::d]from [::b]%s [gray::d]%s\n", event.Actor.GetLogin(), payload.(*github.ForkEvent).Forkee.GetFullName(), event.Repo.GetName(), time)
-					case "WatchEvent":
-						time := timeago.NoMax(timeago.English).Format(event.GetCreatedAt())
-						_, _ = fmt.Fprintf(widget, "[::b]%s [::d]starred [::b]%s [gray::d]%s\n", event.Actor.GetLogin(), event.Repo.GetName(), time)
-					default:
-						_, _ = fmt.Fprintf(widget, "")
-					}
+					data := extractEventData(event)
+					_, _ = fmt.Fprintf(widget, data)
+				} else if text == "AllEvents" {
+					data := extractEventData(event)
+					_, _ = fmt.Fprintf(widget, data)
 				}
 			}
 		}()
@@ -75,5 +66,23 @@ func (c *Client) FeedsWidget() *Widget {
 	return &Widget{
 		Parent:   flex,
 		Children: []tview.Primitive{eventTypes, widget},
+	}
+}
+
+func extractEventData(event *github.Event) string {
+	switch *event.Type {
+	case "CreateEvent":
+		time := timeago.NoMax(timeago.English).Format(event.GetCreatedAt())
+		return fmt.Sprintf("[::b]%s [::d]created a repository [::b]%s [gray::d]%s\n", event.Actor.GetLogin(), event.Repo.GetName(), time)
+	case "ForkEvent":
+		payload, _ := event.ParsePayload()
+		fork := payload.(*github.ForkEvent).Forkee.GetFullName()
+		time := timeago.NoMax(timeago.English).Format(event.GetCreatedAt())
+		return fmt.Sprintf("[::b]%s [::d]forked [::b]%s [::d]from [::b]%s [gray::d]%s\n", event.Actor.GetLogin(), fork, event.Repo.GetName(), time)
+	case "WatchEvent":
+		time := timeago.NoMax(timeago.English).Format(event.GetCreatedAt())
+		return fmt.Sprintf("[::b]%s [::d]starred [::b]%s [gray::d]%s\n", event.Actor.GetLogin(), event.Repo.GetName(), time)
+	default:
+		return fmt.Sprint("")
 	}
 }
