@@ -23,29 +23,10 @@ func (c *Client) FeedsWidget() *Widget {
 
 	eventTypes.SetSelectedFunc(func(text string, index int) {
 		go func() {
-			widget.Clear()
-			events, _, err := c.client.Activity.ListEventsReceivedByUser(c.ctx, c.username, false, &github.ListOptions{
-				PerPage: 100,
+			c.app.QueueUpdate(func() {
+				widget.Clear()
 			})
-			if err != nil {
-				_, _ = fmt.Fprintln(widget, "[::b]an error occurred while retrieving events")
-				return
-			}
-
-			widget.SetTitle(fmt.Sprintf("[green::b]%s", text))
-			if text == "StarEvent" {
-				text = "WatchEvent"
-			}
-
-			for _, event := range events {
-				if index > -1 && *event.Type == text {
-					data := extractEventData(event)
-					_, _ = fmt.Fprintf(widget, data)
-				} else if text == "AllEvents" {
-					data := extractEventData(event)
-					_, _ = fmt.Fprintf(widget, data)
-				}
-			}
+			c.displayEventsData(text, index, widget)
 		}()
 	})
 
@@ -66,6 +47,31 @@ func (c *Client) FeedsWidget() *Widget {
 	return &Widget{
 		Parent:   flex,
 		Children: []tview.Primitive{eventTypes, widget},
+	}
+}
+
+func (c *Client) displayEventsData(text string, index int, widget *tview.TextView) {
+	events, _, err := c.client.Activity.ListEventsReceivedByUser(c.ctx, c.username, false, &github.ListOptions{
+		PerPage: 100,
+	})
+	if err != nil {
+		_, _ = fmt.Fprintln(widget, "[::b]an error occurred while retrieving events")
+		return
+	}
+
+	widget.SetTitle(fmt.Sprintf("[green::b]%s", text))
+	if text == "StarEvent" {
+		text = "WatchEvent"
+	}
+
+	for _, event := range events {
+		if index > -1 && *event.Type == text {
+			data := extractEventData(event)
+			_, _ = fmt.Fprintln(widget, data)
+		} else if text == "AllEvents" {
+			data := extractEventData(event)
+			_, _ = fmt.Fprintln(widget, data)
+		}
 	}
 }
 
