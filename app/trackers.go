@@ -21,6 +21,17 @@ func (g *GitApp) inputHandler(event *tcell.EventKey) *tcell.EventKey {
 			}
 		}
 		return event
+	case tcell.KeyBacktab:
+		currentPage, _ := g.pages.GetFrontPage()
+		page := g.getPage(currentPage)
+		if page != nil {
+			if len(page.widget.Children) > 0 {
+				g.app.SetFocus(prevWidget(page.widget.Children))
+			} else {
+				g.app.SetFocus(page.widget.Parent)
+			}
+		}
+		return event
 	case tcell.KeyCtrlN:
 		pageCount := g.pages.GetPageCount()
 		currentPage, _ := g.pages.GetFrontPage()
@@ -61,6 +72,20 @@ func (g *GitApp) getPageIndex(name string) int {
 		}
 	}
 	return -1
+}
+
+func prevWidget(widgets []tview.Primitive) tview.Primitive {
+	widgetLen := len(widgets)
+	for i := 0; i < widgetLen; i++ {
+		if widgets[i].GetFocusable().HasFocus() {
+			prev := (i - 1) % widgetLen
+			if prev < 0 {
+				return widgets[widgetLen-1]
+			}
+			return widgets[prev]
+		}
+	}
+	return widgets[0]
 }
 
 func nextWidget(widgets []tview.Primitive) tview.Primitive {
