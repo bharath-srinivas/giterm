@@ -15,87 +15,70 @@ func (c *Client) FeedsWidget() *Widget {
 	var res *github.Response
 	var pageSize int
 
-	feeds := tview.NewTextView()
+	feeds := tview.NewTextView().
+		SetDynamicColors(true).
+		SetScrollable(true).
+		SetTextAlign(tview.AlignCenter)
 	feeds.SetBorder(true)
-	feeds.SetDynamicColors(true)
-	feeds.SetScrollable(true)
-	feeds.SetTextAlign(tview.AlignCenter)
 	feeds.SetChangedFunc(func() {
 		feeds.ScrollToBeginning()
 		c.app.Draw()
 	})
 
-	pageSizeOptions := tview.NewDropDown()
-	pageSizeOptions.SetLabelColor(tcell.ColorWhite)
-	pageSizeOptions.SetFieldTextColor(tcell.ColorWhite)
-	pageSizeOptions.SetFieldBackgroundColor(tcell.ColorBlack)
-	pageSizeOptions.SetLabel("Items per page: ")
-	pageSizeOptions.SetOptions([]string{"25", "50", "75", "100"}, func(text string, index int) {
-		pageSize, _ = strconv.Atoi(text)
-		res = c.displayEventsData(feeds, 1, pageSize)
-	})
-	pageSizeOptions.SetCurrentOption(0)
+	pageSizeOptions := tview.NewDropDown().
+		SetLabelColor(tcell.ColorWhite).
+		SetFieldTextColor(tcell.ColorWhite).
+		SetFieldBackgroundColor(tcell.ColorBlack).
+		SetLabel("Items per page: ").
+		SetOptions([]string{"25", "50", "75", "100"}, func(text string, index int) {
+			pageSize, _ = strconv.Atoi(text)
+			res = c.displayEventsData(feeds, 1, pageSize)
+		}).SetCurrentOption(0)
 
-	first := tview.NewButton(string('\U000000AB')).SetLabelColor(tcell.ColorWhite)
-	first.SetLabelColorActivated(tcell.ColorBlack)
-	first.SetBackgroundColorActivated(tcell.ColorWhite)
-	first.SetBackgroundColor(tcell.ColorBlack)
-	first.SetSelectedFunc(func() {
-		if res != nil {
-			res = c.displayEventsData(feeds, res.FirstPage, pageSize)
-		}
-	})
+	first := createButton(string('\U000000AB')).
+		SetSelectedFunc(func() {
+			if res != nil {
+				res = c.displayEventsData(feeds, res.FirstPage, pageSize)
+			}
+		})
 
-	last := tview.NewButton(string('\U000000BB'))
-	last.SetLabelColor(tcell.ColorWhite)
-	last.SetLabelColorActivated(tcell.ColorBlack)
-	last.SetBackgroundColorActivated(tcell.ColorWhite)
-	last.SetBackgroundColor(tcell.ColorBlack)
-	last.SetSelectedFunc(func() {
-		if res != nil {
-			res = c.displayEventsData(feeds, res.LastPage, pageSize)
-		}
-	})
+	last := createButton(string('\U000000BB')).
+		SetSelectedFunc(func() {
+			if res != nil {
+				res = c.displayEventsData(feeds, res.LastPage, pageSize)
+			}
+		})
 
-	prev := tview.NewButton(string('\U000025C4'))
-	prev.SetLabelColor(tcell.ColorWhite)
-	prev.SetLabelColorActivated(tcell.ColorBlack)
-	prev.SetBackgroundColorActivated(tcell.ColorWhite)
-	prev.SetBackgroundColor(tcell.ColorBlack)
-	prev.SetSelectedFunc(func() {
-		if res != nil {
-			res = c.displayEventsData(feeds, res.PrevPage, pageSize)
-		}
-	})
+	prev := createButton(string('\U000025C4')).
+		SetSelectedFunc(func() {
+			if res != nil {
+				res = c.displayEventsData(feeds, res.PrevPage, pageSize)
+			}
+		})
 
-	next := tview.NewButton(string('\U000025BA'))
-	next.SetLabelColor(tcell.ColorWhite)
-	next.SetLabelColorActivated(tcell.ColorBlack)
-	next.SetBackgroundColorActivated(tcell.ColorWhite)
-	next.SetBackgroundColor(tcell.ColorBlack)
-	next.SetSelectedFunc(func() {
-		if res != nil {
-			res = c.displayEventsData(feeds, res.NextPage, pageSize)
-		}
-	})
+	next := createButton(string('\U000025BA')).
+		SetSelectedFunc(func() {
+			if res != nil {
+				res = c.displayEventsData(feeds, res.NextPage, pageSize)
+			}
+		})
 
-	header := tview.NewFlex()
-	header.AddItem(pageSizeOptions, 0, 1, false)
+	header := tview.NewFlex().
+		AddItem(pageSizeOptions, 0, 1, false)
 
-	footer := tview.NewFlex()
-	footer.AddItem(first, 0, 1, false)
-	footer.AddItem(prev, 0, 1, false)
-	footer.AddItem(next, 0, 1, false)
-	footer.AddItem(last, 0, 1, false)
+	footer := tview.NewFlex().
+		AddItem(first, 0, 1, false).
+		AddItem(prev, 0, 1, false).
+		AddItem(next, 0, 1, false).
+		AddItem(last, 0, 1, false)
 
-	view := tview.NewFlex()
-	view.SetBorder(true)
+	view := tview.NewFlex().
+		SetDirection(tview.FlexRow).
+		AddItem(header, 0, 1, false).
+		AddItem(feeds, 0, 15, false).
+		AddItem(footer, 0, 1, false)
 	view.SetTitle(string('\U0001F559') + " [green::b]Feeds")
-	view.SetDirection(tview.FlexRow)
-
-	view.AddItem(header, 0, 1, false)
-	view.AddItem(feeds, 0, 15, false)
-	view.AddItem(footer, 0, 1, false)
+	view.SetBorder(true)
 
 	return &Widget{
 		Parent:   view,
@@ -131,4 +114,13 @@ func (c *Client) displayEventsData(widget *tview.TextView, page, pageSize int) *
 		}
 	}()
 	return res
+}
+
+func createButton(label string) *tview.Button {
+	button := tview.NewButton(label).
+		SetLabelColor(tcell.ColorWhite).
+		SetLabelColorActivated(tcell.ColorBlack).
+		SetBackgroundColorActivated(tcell.ColorWhite)
+	button.SetBackgroundColor(tcell.ColorBlack)
+	return button
 }
