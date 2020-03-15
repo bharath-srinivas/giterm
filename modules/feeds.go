@@ -92,7 +92,7 @@ func (c *Client) displayEventsData(widget *tview.TextView, page, pageSize int) *
 		PerPage: pageSize,
 	})
 	if err != nil {
-		_, _ = fmt.Fprintln(widget, "[::b]an error occurred while retrieving events")
+		_, _ = fmt.Fprintln(widget, "[::b]an error occurred while retrieving feeds")
 		return res
 	}
 	widget.Clear()

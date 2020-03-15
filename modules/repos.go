@@ -25,8 +25,8 @@ func (c *Client) RepoWidget() *Widget {
 
 	repositories, _, err := c.client.Repositories.List(c.ctx, "", nil)
 	if err != nil {
-		widget.SetCellSimple(1, 0, err.Error())
-		return &Widget{}
+		widget.SetCellSimple(1, 0, "[::b]an error occurred while retrieving repositories")
+		return &Widget{Parent: widget}
 	}
 
 	var m []map[string]interface{}

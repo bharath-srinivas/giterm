@@ -33,8 +33,8 @@ func (c *Client) ProfileWidget() *Widget {
 
 	user, _, err := c.client.Users.Get(c.ctx, "")
 	if err != nil {
-		_, _ = fmt.Fprint(widget, "")
-		return &Widget{}
+		_, _ = fmt.Fprint(widget, "[::b]an error occurred while retrieving profile")
+		return &Widget{Parent: widget}
 	}
 
 	var m map[string]interface{}
