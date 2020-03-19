@@ -13,12 +13,16 @@ import (
 
 type Feeds struct {
 	*views.TextWidget
+	*github.ListOptions
+	*github.Response
 }
 
 func FeedsWidget(app *tview.Application, config config.Config) *Feeds {
 	widget := views.NewTextView(app, config, true)
 	return &Feeds{
-		TextWidget: widget,
+		TextWidget:  widget,
+		ListOptions: &github.ListOptions{},
+		Response:    &github.Response{},
 	}
 }
 
@@ -26,30 +30,6 @@ func (f *Feeds) Refresh() {
 	f.Redraw(func() {
 		f.display(f.ListOptions)
 	})
-}
-
-func (f *Feeds) display(options *github.ListOptions) {
-	events, res, err := f.Client.Activity.ListEventsReceivedByUser(f.Context, f.Username, false, options)
-	if err != nil {
-		_, _ = fmt.Fprintln(f.View, "[::b]an error occurred while retrieving feeds")
-		return
-	}
-	f.Response = res
-	for _, event := range events {
-		switch *event.Type {
-		case "CreateEvent":
-			time := timeago.NoMax(timeago.English).Format(event.GetCreatedAt())
-			_, _ = fmt.Fprintf(f.View, "[::b]%s [::d]created a repository [::b]%s [gray::d]%s\n\n", event.Actor.GetLogin(), event.Repo.GetName(), time)
-		case "ForkEvent":
-			payload, _ := event.ParsePayload()
-			fork := payload.(*github.ForkEvent).Forkee.GetFullName()
-			time := timeago.NoMax(timeago.English).Format(event.GetCreatedAt())
-			_, _ = fmt.Fprintf(f.View, "[::b]%s [::d]forked [::b]%s [::d]from [::b]%s [gray::d]%s\n\n", event.Actor.GetLogin(), fork, event.Repo.GetName(), time)
-		case "WatchEvent":
-			time := timeago.NoMax(timeago.English).Format(event.GetCreatedAt())
-			_, _ = fmt.Fprintf(f.View, "[::b]%s [::d]starred [::b]%s [gray::d]%s\n\n", event.Actor.GetLogin(), event.Repo.GetName(), time)
-		}
-	}
 }
 
 func (f *Feeds) SetPageSize(pageSize int) {
@@ -83,5 +63,29 @@ func (f *Feeds) Next() {
 	if f.Response != nil {
 		f.ListOptions.Page = f.NextPage
 		go f.Refresh()
+	}
+}
+
+func (f *Feeds) display(options *github.ListOptions) {
+	events, res, err := f.Client.Activity.ListEventsReceivedByUser(f.Context, f.Username, false, options)
+	if err != nil {
+		_, _ = fmt.Fprintln(f.View, "[::b]an error occurred while retrieving feeds")
+		return
+	}
+	f.Response = res
+	for _, event := range events {
+		switch *event.Type {
+		case "CreateEvent":
+			time := timeago.NoMax(timeago.English).Format(event.GetCreatedAt())
+			_, _ = fmt.Fprintf(f.View, "[::b]%s [::d]created a repository [::b]%s [gray::d]%s\n\n", event.Actor.GetLogin(), event.Repo.GetName(), time)
+		case "ForkEvent":
+			payload, _ := event.ParsePayload()
+			fork := payload.(*github.ForkEvent).Forkee.GetFullName()
+			time := timeago.NoMax(timeago.English).Format(event.GetCreatedAt())
+			_, _ = fmt.Fprintf(f.View, "[::b]%s [::d]forked [::b]%s [::d]from [::b]%s [gray::d]%s\n\n", event.Actor.GetLogin(), fork, event.Repo.GetName(), time)
+		case "WatchEvent":
+			time := timeago.NoMax(timeago.English).Format(event.GetCreatedAt())
+			_, _ = fmt.Fprintf(f.View, "[::b]%s [::d]starred [::b]%s [gray::d]%s\n\n", event.Actor.GetLogin(), event.Repo.GetName(), time)
+		}
 	}
 }
