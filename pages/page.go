@@ -43,6 +43,14 @@ func (p *Page) NextWidget() tview.Primitive {
 	return p.Widgets.Parent
 }
 
+func (p *Page) Refresh() {
+	if len(p.Children) > 0 {
+		p.Widgets.Refresh()
+	} else if parent, ok := p.Parent.(Refreshable); ok {
+		go parent.Refresh()
+	}
+}
+
 type Pages []*Page
 
 func MakePages(app *tview.Application, config config.Config) Pages {

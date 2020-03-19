@@ -27,6 +27,11 @@ func (g *GitApp) inputHandler(event *tcell.EventKey) *tcell.EventKey {
 		currentPage, _ := g.pages.GetFrontPage()
 		g.pages.SwitchToPage(g.appPages.Prev(currentPage))
 		return event
+	case tcell.KeyCtrlR:
+		currentPage, _ := g.pages.GetFrontPage()
+		page := g.appPages.Get(currentPage)
+		page.Refresh()
+		return event
 	}
 	return event
 }

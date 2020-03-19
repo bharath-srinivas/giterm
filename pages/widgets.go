@@ -9,6 +9,10 @@ type Widgets struct {
 	Children []tview.Primitive
 }
 
+type Refreshable interface {
+	Refresh()
+}
+
 func (w *Widgets) Prev() tview.Primitive {
 	widgets := w.Children
 	widgetLen := len(widgets)
@@ -33,4 +37,12 @@ func (w *Widgets) Next() tview.Primitive {
 		}
 	}
 	return widgets[0]
+}
+
+func (w *Widgets) Refresh() {
+	for _, widget := range w.Children {
+		if widget, ok := widget.(Refreshable); ok {
+			go widget.Refresh()
+		}
+	}
 }

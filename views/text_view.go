@@ -8,7 +8,7 @@ import (
 
 type TextWidget struct {
 	*Base
-	View *tview.TextView
+	*tview.TextView
 }
 
 func NewTextView(app *tview.Application, config config.Config, bordered bool) *TextWidget {
@@ -18,15 +18,15 @@ func NewTextView(app *tview.Application, config config.Config, bordered bool) *T
 		SetTextAlign(tview.AlignCenter)
 	widget.SetBorder(bordered)
 	return &TextWidget{
-		Base: NewBase(app, config),
-		View: widget,
+		Base:     NewBase(app, config),
+		TextView: widget,
 	}
 }
 
 func (t *TextWidget) Redraw(display func()) {
 	t.app.QueueUpdateDraw(func() {
-		t.View.Clear()
+		t.Clear()
 		display()
-		t.View.ScrollToBeginning()
+		t.ScrollToBeginning()
 	})
 }

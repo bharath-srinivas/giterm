@@ -25,7 +25,7 @@ func FeedsPage(app *tview.Application, config config.Config) *Page {
 	view := tview.NewFlex().
 		SetDirection(tview.FlexRow).
 		AddItem(header, 0, 1, false).
-		AddItem(feeds.View, 0, 15, false).
+		AddItem(feeds, 0, 15, false).
 		AddItem(footer, 0, 1, false)
 	view.SetTitle(string('\U0001F559') + " [green::b]Feeds")
 	view.SetBorder(true)
@@ -36,7 +36,7 @@ func FeedsPage(app *tview.Application, config config.Config) *Page {
 			Parent: view,
 			Children: []tview.Primitive{
 				pageSizes,
-				feeds.View,
+				feeds,
 				pagination.First,
 				pagination.Prev,
 				pagination.Next,

@@ -11,6 +11,6 @@ func ProfilePage(app *tview.Application, config config.Config) *Page {
 	profile := modules.ProfileWidget(app, config)
 	return &Page{
 		Name:    "Profile",
-		Widgets: &Widgets{Parent: profile.View},
+		Widgets: &Widgets{Parent: profile},
 	}
 }
