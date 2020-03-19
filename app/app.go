@@ -7,31 +7,32 @@ import (
 	"github.com/rivo/tview"
 
 	"github.com/bharath-srinivas/giterm/config"
+	"github.com/bharath-srinivas/giterm/pages"
 )
 
 type GitApp struct {
 	app      *tview.Application
-	appPages []*page
-	config   config.Config
+	appPages pages.Pages
 	pages    *tview.Pages
 }
 
 func New(app *tview.Application) *GitApp {
-	config.Init()
-	cfg := config.GetConfig()
-
 	gitApp := &GitApp{
-		app:    app,
-		pages:  tview.NewPages(),
-		config: cfg,
+		app:   app,
+		pages: tview.NewPages(),
 	}
-	gitApp.LoadPages()
+	cfg := config.GetConfig()
+	gitApp.appPages = pages.MakePages(app, cfg)
+	for _, page := range gitApp.appPages {
+		gitApp.pages.AddPage(page.Name, page.Widgets.Parent, true, false)
+	}
+	gitApp.pages.SwitchToPage(gitApp.appPages[0].Name)
 	gitApp.app.SetInputCapture(gitApp.inputHandler)
 	gitApp.app.SetRoot(gitApp.pages, true).SetFocus(gitApp.pages)
 	return gitApp
 }
 
-func (g *GitApp) Start() {
+func (g *GitApp) Run() {
 	if err := g.app.Run(); err != nil {
 		log.Println(err)
 		os.Exit(1)

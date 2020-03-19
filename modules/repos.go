@@ -1,55 +1,53 @@
 package modules
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/rivo/tview"
+
+	"github.com/bharath-srinivas/giterm/config"
+	"github.com/bharath-srinivas/giterm/views"
 )
 
-type repo struct {
-	Name            string `json:"name,omitempty"`
-	Description     string `json:"description,omitempty"`
-	Homepage        string `json:"homepage,omitempty"`
-	GitURL          string `json:"git_url,omitempty"`
-	ForksCount      int    `json:"forks_count,omitempty"`
-	OpenIssuesCount int    `json:"open_issues_count,omitempty"`
-	StargazersCount int    `json:"stargazers_count,omitempty"`
+type Repos struct {
+	*views.Base
+	*tview.Table
 }
 
-func (c *Client) RepoWidget() *Widget {
-	widget := tview.NewTable()
-	widget.SetBorder(true)
-	widget.SetBorders(true)
-	widget.SetTitle(string('\U0001F4D5') + " [green::b]Repositories")
+func RepoWidget(app *tview.Application, config config.Config) *Repos {
+	widget := tview.NewTable().
+		SetBorders(true)
+	widget.SetTitle(string('\U0001F4D5') + " [green::b]Repositories").
+		SetBorder(true)
 
-	repositories, _, err := c.client.Repositories.List(c.ctx, "", nil)
+	r := &Repos{
+		views.NewBase(app, config),
+		widget,
+	}
+	r.display()
+	return r
+}
+
+func (r *Repos) display() {
+	repositories, _, err := r.Client.Repositories.List(r.Context, "", nil)
 	if err != nil {
-		widget.SetCellSimple(1, 0, "[::b]an error occurred while retrieving repositories")
-		return &Widget{Parent: widget}
+		r.Table.SetCellSimple(1, 0, "[::b]an error occurred while retrieving repositories")
+		return
 	}
 
-	var m []map[string]interface{}
-	repoJson, _ := json.Marshal(repositories)
-	_ = json.Unmarshal(repoJson, &m)
-
-	var repos []repo
-	_ = json.Unmarshal(repoJson, &repos)
-
-	widget = setTableHeaders(widget)
-	for row, repo := range repos {
-		widget.SetCellSimple(row+1, 0, "[white::b]"+repo.Name)
-		widget.SetCellSimple(row+1, 1, "[white::b]"+repo.Description)
-		widget.SetCellSimple(row+1, 2, "[white::b]"+repo.Homepage)
-		widget.SetCellSimple(row+1, 3, "[white::b]"+repo.GitURL)
-		widget.SetCellSimple(row+1, 4, fmt.Sprintf("[white::b]%d", repo.StargazersCount))
-		widget.SetCellSimple(row+1, 5, fmt.Sprintf("[white::b]%d", repo.OpenIssuesCount))
-		widget.SetCellSimple(row+1, 6, fmt.Sprintf("[white::b]%d", repo.ForksCount))
+	r.setTableHeaders()
+	for row, repo := range repositories {
+		r.Table.SetCellSimple(row+1, 0, "[white::b]"+repo.GetName()).
+			SetCellSimple(row+1, 1, "[white::b]"+repo.GetDescription()).
+			SetCellSimple(row+1, 2, "[white::b]"+repo.GetHomepage()).
+			SetCellSimple(row+1, 3, "[white::b]"+repo.GetGitURL()).
+			SetCellSimple(row+1, 4, fmt.Sprintf("[white::b]%d", repo.GetStargazersCount())).
+			SetCellSimple(row+1, 5, fmt.Sprintf("[white::b]%d", repo.GetOpenIssuesCount())).
+			SetCellSimple(row+1, 6, fmt.Sprintf("[white::b]%d", repo.GetForksCount()))
 	}
-	return &Widget{Parent: widget}
 }
 
-func setTableHeaders(widget *tview.Table) *tview.Table {
+func (r *Repos) setTableHeaders() {
 	headers := []string{
 		"[gray::b]Name",
 		"[gray::b]Description",
@@ -60,7 +58,6 @@ func setTableHeaders(widget *tview.Table) *tview.Table {
 		"[gray::b]Forks"}
 
 	for i, field := range headers {
-		widget.SetCellSimple(0, i, field)
+		r.Table.SetCellSimple(0, i, field)
 	}
-	return widget
 }

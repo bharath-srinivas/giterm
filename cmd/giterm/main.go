@@ -37,5 +37,5 @@ func main() {
 		}
 	})
 	gitApp := app.New(tview.NewApplication())
-	gitApp.Start()
+	gitApp.Run()
 }

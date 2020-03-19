@@ -1,30 +1,28 @@
-package modules
+package views
 
 import (
 	"context"
 
 	"github.com/google/go-github/v29/github"
-	"github.com/rivo/tview"
 	"golang.org/x/oauth2"
 
 	"github.com/bharath-srinivas/giterm/config"
 )
 
 type Client struct {
-	app      *tview.Application
-	client   *github.Client
-	ctx      context.Context
-	username string
+	Username string
+
+	*github.Client
+	context.Context
 }
 
-func NewClient(app *tview.Application, config config.Config) *Client {
+func NewClient(config config.Config) *Client {
 	ctx := context.Background()
 	client := &Client{
-		app:    app,
-		client: githubClient(config, ctx),
-		ctx:    ctx,
+		Client:  githubClient(config, ctx),
+		Context: ctx,
 	}
-	client.username = client.getUsername()
+	client.Username = client.getUsername()
 	return client
 }
 
@@ -37,7 +35,7 @@ func githubClient(config config.Config, context context.Context) *github.Client 
 }
 
 func (c *Client) getUsername() string {
-	user, _, err := c.client.Users.Get(c.ctx, "")
+	user, _, err := c.Client.Users.Get(c.Context, "")
 	if err != nil || user == nil || user.Login == nil {
 		return ""
 	}

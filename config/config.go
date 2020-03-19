@@ -15,16 +15,7 @@ type Config struct {
 
 var config Config
 
-func New(key, value string) error {
-	setConfigPath()
-	viper.Set(key, value)
-	if err := viper.WriteConfig(); err != nil {
-		return viper.SafeWriteConfig()
-	}
-	return nil
-}
-
-func Init() {
+func init() {
 	if err := readConfig(); err != nil {
 		if err, ok := err.(viper.ConfigFileNotFoundError); ok {
 			log.Println("config file not found. please set your personal access token.")
@@ -34,6 +25,15 @@ func Init() {
 		os.Exit(1)
 	}
 	config.Token = viper.GetString("token")
+}
+
+func New(key, value string) error {
+	setConfigPath()
+	viper.Set(key, value)
+	if err := viper.WriteConfig(); err != nil {
+		return viper.SafeWriteConfig()
+	}
+	return nil
 }
 
 func GetConfig() Config {

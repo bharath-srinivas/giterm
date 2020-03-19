@@ -1,63 +1,49 @@
 package modules
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/rivo/tview"
+
+	"github.com/bharath-srinivas/giterm/config"
+	"github.com/bharath-srinivas/giterm/views"
 )
 
-type profile struct {
-	Name              string `json:"name,omitempty"`
-	UserName          string `json:"login,omitempty"`
-	Company           string `json:"company,omitempty"`
-	Blog              string `json:"blog,omitempty"`
-	Location          string `json:"location,omitempty"`
-	Email             string `json:"email,omitempty"`
-	Bio               string `json:"bio,omitempty"`
-	PublicRepos       int    `json:"public_repos,omitempty"`
-	PublicGists       int    `json:"public_gists,omitempty"`
-	Followers         int    `json:"followers,omitempty"`
-	Following         int    `json:"following,omitempty"`
-	OwnedPrivateRepos int    `json:"owned_private_repos,omitempty"`
-	TotalPrivateRepos int    `json:"total_private_repos,omitempty"`
-	PrivateGists      int    `json:"private_gists,omitempty"`
+type Profile struct {
+	*views.TextWidget
 }
 
-func (c *Client) ProfileWidget() *Widget {
-	widget := tview.NewTextView()
-	widget.SetBorder(true)
-	widget.SetDynamicColors(true)
-	widget.SetScrollable(true)
-	widget.SetTitle(string('\U0001F642') + " [green::b]Profile")
+func ProfileWidget(app *tview.Application, config config.Config) *Profile {
+	widget := views.NewTextView(app, config, true)
+	widget.View.SetTitle(string('\U0001F642') + " [green::b]Profile")
+	p := &Profile{TextWidget: widget}
+	go p.Refresh()
+	return p
+}
 
-	user, _, err := c.client.Users.Get(c.ctx, "")
+func (p *Profile) Refresh() {
+	p.Redraw(p.display)
+}
+
+func (p *Profile) display() {
+	user, _, err := p.Client.Users.Get(p.Context, "")
 	if err != nil {
-		_, _ = fmt.Fprint(widget, "[::b]an error occurred while retrieving profile")
-		return &Widget{Parent: widget}
+		_, _ = fmt.Fprint(p.View, "[::b]an error occurred while retrieving profile")
+		return
 	}
 
-	var m map[string]interface{}
-	userJson, _ := json.Marshal(user)
-	_ = json.Unmarshal(userJson, &m)
-
-	var p profile
-	_ = json.Unmarshal(userJson, &p)
-
-	_, _ = fmt.Fprintf(widget, "[gray::b]%s: [white]%s\n", "Name", p.Name)
-	_, _ = fmt.Fprintf(widget, "[gray::b]%s: [white]%s\n", "Username", p.UserName)
-	_, _ = fmt.Fprintf(widget, "[gray::b]%s: [white]%s\n", "Company", p.Company)
-	_, _ = fmt.Fprintf(widget, "[gray::b]%s: [white]%s\n", "Blog", p.Blog)
-	_, _ = fmt.Fprintf(widget, "[gray::b]%s: [white]%s\n", "Location", p.Location)
-	_, _ = fmt.Fprintf(widget, "[gray::b]%s: [white]%s\n", "Email", p.Email)
-	_, _ = fmt.Fprintf(widget, "[gray::b]%s: [white]%s\n", "Bio", p.Bio)
-	_, _ = fmt.Fprintf(widget, "[gray::b]%s: [white]%d\n", "Public Repos", p.PublicRepos)
-	_, _ = fmt.Fprintf(widget, "[gray::b]%s: [white]%d\n", "Public Gists", p.PublicGists)
-	_, _ = fmt.Fprintf(widget, "[gray::b]%s: [white]%d\n", "Followers", p.Followers)
-	_, _ = fmt.Fprintf(widget, "[gray::b]%s: [white]%d\n", "Following", p.Following)
-	_, _ = fmt.Fprintf(widget, "[gray::b]%s: [white]%d\n", "Owned Private Repos", p.OwnedPrivateRepos)
-	_, _ = fmt.Fprintf(widget, "[gray::b]%s: [white]%d\n", "Total Private Repos", p.TotalPrivateRepos)
-	_, _ = fmt.Fprintf(widget, "[gray::b]%s: [white]%d\n", "Private Gists", p.PrivateGists)
-
-	return &Widget{Parent: widget}
+	_, _ = fmt.Fprintf(p.View, "[gray::b]%s: [white]%s\n", "Name", user.GetName())
+	_, _ = fmt.Fprintf(p.View, "[gray::b]%s: [white]%s\n", "Username", user.GetLogin())
+	_, _ = fmt.Fprintf(p.View, "[gray::b]%s: [white]%s\n", "Company", user.GetCompany())
+	_, _ = fmt.Fprintf(p.View, "[gray::b]%s: [white]%s\n", "Blog", user.GetBlog())
+	_, _ = fmt.Fprintf(p.View, "[gray::b]%s: [white]%s\n", "Location", user.GetLocation())
+	_, _ = fmt.Fprintf(p.View, "[gray::b]%s: [white]%s\n", "Email", user.GetEmail())
+	_, _ = fmt.Fprintf(p.View, "[gray::b]%s: [white]%s\n", "Bio", user.GetBio())
+	_, _ = fmt.Fprintf(p.View, "[gray::b]%s: [white]%d\n", "Public Repos", user.GetPublicRepos())
+	_, _ = fmt.Fprintf(p.View, "[gray::b]%s: [white]%d\n", "Public Gists", user.GetPublicGists())
+	_, _ = fmt.Fprintf(p.View, "[gray::b]%s: [white]%d\n", "Followers", user.GetFollowers())
+	_, _ = fmt.Fprintf(p.View, "[gray::b]%s: [white]%d\n", "Following", user.GetFollowing())
+	_, _ = fmt.Fprintf(p.View, "[gray::b]%s: [white]%d\n", "Owned Private Repos", user.GetOwnedPrivateRepos())
+	_, _ = fmt.Fprintf(p.View, "[gray::b]%s: [white]%d\n", "Total Private Repos", user.GetTotalPrivateRepos())
+	_, _ = fmt.Fprintf(p.View, "[gray::b]%s: [white]%d\n", "Private Gists", user.GetPrivateGists())
 }
