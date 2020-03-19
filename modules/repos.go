@@ -2,7 +2,9 @@ package modules
 
 import (
 	"fmt"
+	"strings"
 
+	"github.com/google/go-github/v29/github"
 	"github.com/rivo/tview"
 
 	"github.com/bharath-srinivas/giterm/config"
@@ -10,31 +12,82 @@ import (
 )
 
 type Repos struct {
+	app *tview.Application
 	*views.Base
 	*tview.Table
+	*github.RepositoryListOptions
+	*github.Response
 }
 
+// TODO: convert this widget as text widget
 func RepoWidget(app *tview.Application, config config.Config) *Repos {
 	widget := tview.NewTable().
 		SetBorders(true)
-	widget.SetTitle(string('\U0001F4D5') + " [green::b]Repositories").
-		SetBorder(true)
-
+	widget.SetBorder(true)
 	r := &Repos{
-		views.NewBase(app, config),
-		widget,
+		app:                   app,
+		Base:                  views.NewBase(app, config),
+		Table:                 widget,
+		RepositoryListOptions: &github.RepositoryListOptions{},
+		Response:              &github.Response{},
 	}
-	r.display()
 	return r
 }
 
-func (r *Repos) display() {
-	repositories, _, err := r.Client.Repositories.List(r.Context, "", nil)
+func (r *Repos) Refresh() {
+	r.app.QueueUpdateDraw(func() {
+		r.Clear()
+		r.display(r.RepositoryListOptions)
+		r.ScrollToBeginning()
+	})
+}
+
+func (r *Repos) Filter(repoType string) {
+	r.RepositoryListOptions.Type = strings.ToLower(repoType)
+	go r.Refresh()
+}
+
+func (r *Repos) SetPageSize(pageSize int) {
+	r.Page = 1
+	r.PerPage = pageSize
+	go r.Refresh()
+}
+
+func (r *Repos) First() {
+	if r.Response != nil {
+		r.Page = r.FirstPage
+		go r.Refresh()
+	}
+}
+
+func (r *Repos) Last() {
+	if r.Response != nil {
+		r.Page = r.LastPage
+		go r.Refresh()
+	}
+}
+
+func (r *Repos) Prev() {
+	if r.Response != nil {
+		r.Page = r.PrevPage
+		go r.Refresh()
+	}
+}
+
+func (r *Repos) Next() {
+	if r.Response != nil {
+		r.Page = r.NextPage
+		go r.Refresh()
+	}
+}
+
+func (r *Repos) display(options *github.RepositoryListOptions) {
+	repositories, res, err := r.Client.Repositories.List(r.Context, "", options)
 	if err != nil {
 		r.Table.SetCellSimple(1, 0, "[::b]an error occurred while retrieving repositories")
 		return
 	}
-
+	r.Response = res
 	r.setTableHeaders()
 	for row, repo := range repositories {
 		r.Table.SetCellSimple(row+1, 0, "[white::b]"+repo.GetName()).
