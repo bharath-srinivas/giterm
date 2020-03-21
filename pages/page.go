@@ -40,7 +40,7 @@ func (p *Page) PrevWidget() tview.Primitive {
 	return p.Widgets.Parent
 }
 
-// PrevWidget returns the next widget in a page. If no child widgets are present, it will set the focus on the parent.
+// NextWidget returns the next widget in a page. If no child widgets are present, it will set the focus on the parent.
 func (p *Page) NextWidget() tview.Primitive {
 	if len(p.Children) > 0 {
 		return p.Widgets.Next()

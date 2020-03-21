@@ -7,6 +7,7 @@ import (
 	"github.com/bharath-srinivas/giterm/modules"
 )
 
+// ReposPage returns the repository page with filters, pagination and page size options.
 func ReposPage(app *tview.Application, config config.Config) *Page {
 	repos := modules.RepoWidget(app, config)
 	pageSizes := modules.PageSizeWidget(repos)

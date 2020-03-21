@@ -21,7 +21,7 @@ type Client struct {
 func NewClient(config config.Config) *Client {
 	ctx := context.Background()
 	client := &Client{
-		Client:  githubClient(config, ctx),
+		Client:  githubClient(ctx, config),
 		Context: ctx,
 	}
 	client.Username = client.getUsername()
@@ -29,7 +29,7 @@ func NewClient(config config.Config) *Client {
 }
 
 // githubClient returns a new github client with the provided token and context.
-func githubClient(config config.Config, context context.Context) *github.Client {
+func githubClient(context context.Context, config config.Config) *github.Client {
 	tokenSource := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: config.Token},
 	)

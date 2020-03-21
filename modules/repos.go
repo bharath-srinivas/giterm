@@ -20,8 +20,8 @@ type Repos struct {
 	*github.Response
 }
 
-// TODO: convert this widget as text widget
 // RepoWidget return a new instance of repo widget.
+// TODO: convert this widget as text widget
 func RepoWidget(app *tview.Application, config config.Config) *Repos {
 	widget := tview.NewTable().
 		SetBorders(true)
