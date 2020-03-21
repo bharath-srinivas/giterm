@@ -9,10 +9,12 @@ import (
 	"github.com/bharath-srinivas/giterm/views"
 )
 
+// Profile represents a github profile.
 type Profile struct {
 	*views.TextWidget
 }
 
+// ProfileWidget return a new instance of profile widget.
 func ProfileWidget(app *tview.Application, config config.Config) *Profile {
 	widget := views.NewTextView(app, config, true)
 	widget.TextView.SetTitle(string('\U0001F642') + " [green::b]Profile")
@@ -21,10 +23,12 @@ func ProfileWidget(app *tview.Application, config config.Config) *Profile {
 	return p
 }
 
+// Refresh refreshes the profile widget.
 func (p *Profile) Refresh() {
 	p.Redraw(p.display)
 }
 
+// display renders the user profile in a text view.
 func (p *Profile) display() {
 	user, _, err := p.Client.Users.Get(p.Context, "")
 	if err != nil {

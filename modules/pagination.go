@@ -1,4 +1,4 @@
-package views
+package modules
 
 import (
 	"strconv"
@@ -7,6 +7,7 @@ import (
 	"github.com/rivo/tview"
 )
 
+// Paginator provides methods to navigate through the paginated data.
 type Paginator interface {
 	First()
 	Last()
@@ -14,10 +15,12 @@ type Paginator interface {
 	Next()
 }
 
+// PageSizer provides a method to set the page size for the paginated data.
 type PageSizer interface {
 	SetPageSize(pageSize int)
 }
 
+// Pagination represents the navigation buttons used in the application.
 type Pagination struct {
 	First *tview.Button
 	Last  *tview.Button
@@ -25,6 +28,7 @@ type Pagination struct {
 	Next  *tview.Button
 }
 
+// PaginationWidget return a new pagination widget that contains buttons to navigate to first, last, previous and next pages.
 func PaginationWidget(paginator Paginator) *Pagination {
 	var pagination Pagination
 	pagination.First = createButton(string('\U000000AB')).
@@ -49,6 +53,7 @@ func PaginationWidget(paginator Paginator) *Pagination {
 	return &pagination
 }
 
+// PageSizeWidget return a new drop down widget with different page size options.
 func PageSizeWidget(pageSizer PageSizer) *tview.DropDown {
 	pageSizes := tview.NewDropDown().
 		SetLabelColor(tcell.ColorWhite).
@@ -62,6 +67,7 @@ func PageSizeWidget(pageSizer PageSizer) *tview.DropDown {
 	return pageSizes
 }
 
+// createButton returns a new button with the provided label for pagination.
 func createButton(label string) *tview.Button {
 	button := tview.NewButton(label).
 		SetLabelColor(tcell.ColorWhite).

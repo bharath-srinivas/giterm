@@ -4,6 +4,7 @@ import (
 	"github.com/gdamore/tcell"
 )
 
+// input handler for the GitApp.
 func (g *GitApp) inputHandler(event *tcell.EventKey) *tcell.EventKey {
 	switch event.Key() {
 	case tcell.KeyCtrlQ:

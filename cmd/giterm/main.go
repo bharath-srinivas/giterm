@@ -17,6 +17,7 @@ func init() {
 	pflag.String("token", "", "your github personal access token")
 }
 
+// sets the personal access token
 func setToken() {
 	token := viper.GetString("token")
 	if token == "" {

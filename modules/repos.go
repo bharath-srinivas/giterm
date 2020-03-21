@@ -11,6 +11,7 @@ import (
 	"github.com/bharath-srinivas/giterm/views"
 )
 
+// Repos represents the github repositories.
 type Repos struct {
 	app *tview.Application
 	*views.Base
@@ -20,6 +21,7 @@ type Repos struct {
 }
 
 // TODO: convert this widget as text widget
+// RepoWidget return a new instance of repo widget.
 func RepoWidget(app *tview.Application, config config.Config) *Repos {
 	widget := tview.NewTable().
 		SetBorders(true)
@@ -34,6 +36,7 @@ func RepoWidget(app *tview.Application, config config.Config) *Repos {
 	return r
 }
 
+// Refresh refreshes the repository list.
 func (r *Repos) Refresh() {
 	r.app.QueueUpdateDraw(func() {
 		r.Clear()
@@ -42,17 +45,20 @@ func (r *Repos) Refresh() {
 	})
 }
 
+// Filter filters the repository list according to the given repository type.
 func (r *Repos) Filter(repoType string) {
 	r.RepositoryListOptions.Type = strings.ToLower(repoType)
 	go r.Refresh()
 }
 
+// SetPageSize sets the page size.
 func (r *Repos) SetPageSize(pageSize int) {
 	r.Page = 1
 	r.PerPage = pageSize
 	go r.Refresh()
 }
 
+// First navigates to the first page of the repository list.
 func (r *Repos) First() {
 	if r.Response != nil {
 		r.Page = r.FirstPage
@@ -60,6 +66,7 @@ func (r *Repos) First() {
 	}
 }
 
+// Last navigates to the last page of the repository list.
 func (r *Repos) Last() {
 	if r.Response != nil {
 		r.Page = r.LastPage
@@ -67,6 +74,7 @@ func (r *Repos) Last() {
 	}
 }
 
+// Prev navigates to the previous page of the repository list.
 func (r *Repos) Prev() {
 	if r.Response != nil {
 		r.Page = r.PrevPage
@@ -74,6 +82,7 @@ func (r *Repos) Prev() {
 	}
 }
 
+// Next navigates to the next page of the repository list.
 func (r *Repos) Next() {
 	if r.Response != nil {
 		r.Page = r.NextPage
@@ -81,6 +90,7 @@ func (r *Repos) Next() {
 	}
 }
 
+// display renders the repository list according to the provided filter, pagination and page size options.
 func (r *Repos) display(options *github.RepositoryListOptions) {
 	repositories, res, err := r.Client.Repositories.List(r.Context, "", options)
 	if err != nil {
@@ -100,6 +110,7 @@ func (r *Repos) display(options *github.RepositoryListOptions) {
 	}
 }
 
+// setTableHeaders sets the table headers.
 func (r *Repos) setTableHeaders() {
 	headers := []string{
 		"[gray::b]Name",

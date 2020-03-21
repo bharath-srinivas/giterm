@@ -1,3 +1,4 @@
+// Package pages implements all the pages that are displayed in the application.
 package pages
 
 import (
@@ -6,11 +7,13 @@ import (
 	"github.com/bharath-srinivas/giterm/config"
 )
 
+// Page represents a page in the application.
 type Page struct {
 	Name string
 	*Widgets
 }
 
+// MakePage returns a new page according to the given page name.
 func MakePage(app *tview.Application, config config.Config, pageName string) *Page {
 	var page *Page
 	switch pageName {
@@ -29,6 +32,7 @@ func MakePage(app *tview.Application, config config.Config, pageName string) *Pa
 	return page
 }
 
+// PrevWidget returns the previous widget in a page. If no child widgets are present, it will set the focus on the parent.
 func (p *Page) PrevWidget() tview.Primitive {
 	if len(p.Children) > 0 {
 		return p.Widgets.Prev()
@@ -36,6 +40,7 @@ func (p *Page) PrevWidget() tview.Primitive {
 	return p.Widgets.Parent
 }
 
+// PrevWidget returns the next widget in a page. If no child widgets are present, it will set the focus on the parent.
 func (p *Page) NextWidget() tview.Primitive {
 	if len(p.Children) > 0 {
 		return p.Widgets.Next()
@@ -43,6 +48,7 @@ func (p *Page) NextWidget() tview.Primitive {
 	return p.Widgets.Parent
 }
 
+// Refresh refreshes all the widgets in a page.
 func (p *Page) Refresh() {
 	if len(p.Children) > 0 {
 		p.Widgets.Refresh()
@@ -51,8 +57,10 @@ func (p *Page) Refresh() {
 	}
 }
 
+// Pages represents a collection of pages.
 type Pages []*Page
 
+// MakePages returns all the pages needed by the application.
 func MakePages(app *tview.Application, config config.Config) Pages {
 	var p Pages
 	pages := []string{"feeds", "profile", "repos"}
@@ -62,6 +70,7 @@ func MakePages(app *tview.Application, config config.Config) Pages {
 	return p
 }
 
+// Get returns the page according to the given page name if it exists.
 func (p Pages) Get(name string) *Page {
 	for _, page := range p {
 		if page.Name == name {
@@ -71,6 +80,7 @@ func (p Pages) Get(name string) *Page {
 	return nil
 }
 
+// Prev returns the previous page name based on the given page name.
 func (p Pages) Prev(currentPage string) string {
 	pageCount := len(p)
 	currentPageIndex := p.getPageIndex(currentPage)
@@ -81,6 +91,7 @@ func (p Pages) Prev(currentPage string) string {
 	return p[prevPageIndex].Name
 }
 
+// Next returns the next page name based on the given page name.
 func (p Pages) Next(currentPage string) string {
 	pageCount := len(p)
 	currentPageIndex := p.getPageIndex(currentPage)
@@ -88,6 +99,7 @@ func (p Pages) Next(currentPage string) string {
 	return p[nextPageIndex].Name
 }
 
+// getPageIndex returns the index of the given page name if it exists else it will return a negative value.
 func (p Pages) getPageIndex(name string) int {
 	for index, page := range p {
 		if page.Name == name {

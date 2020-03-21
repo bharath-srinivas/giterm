@@ -5,14 +5,13 @@ import (
 
 	"github.com/bharath-srinivas/giterm/config"
 	"github.com/bharath-srinivas/giterm/modules"
-	"github.com/bharath-srinivas/giterm/views"
 )
 
 func ReposPage(app *tview.Application, config config.Config) *Page {
 	repos := modules.RepoWidget(app, config)
-	pageSizes := views.PageSizeWidget(repos)
-	pagination := views.PaginationWidget(repos)
-	filters := views.FilterWidget("Type: ", []string{"All", "Owner", "Public", "Private", "Member"}, repos)
+	pageSizes := modules.PageSizeWidget(repos)
+	pagination := modules.PaginationWidget(repos)
+	filters := modules.FilterWidget("Type: ", []string{"All", "Owner", "Public", "Private", "Member"}, repos)
 
 	header := tview.NewFlex().
 		AddItem(pageSizes, 0, 1, false).

@@ -7,6 +7,7 @@ import (
 	"github.com/bharath-srinivas/giterm/modules"
 )
 
+// ProfilePage returns the profile page.
 func ProfilePage(app *tview.Application, config config.Config) *Page {
 	profile := modules.ProfileWidget(app, config)
 	return &Page{

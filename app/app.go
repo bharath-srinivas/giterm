@@ -1,3 +1,4 @@
+// Package app implements the terminal based giterm application.
 package app
 
 import (
@@ -10,12 +11,14 @@ import (
 	"github.com/bharath-srinivas/giterm/pages"
 )
 
+// GitApp represents the main application.
 type GitApp struct {
 	app      *tview.Application
 	appPages pages.Pages
 	pages    *tview.Pages
 }
 
+// New returns a new instance of GitApp.
 func New(app *tview.Application) *GitApp {
 	gitApp := &GitApp{
 		app:   app,
@@ -32,6 +35,7 @@ func New(app *tview.Application) *GitApp {
 	return gitApp
 }
 
+// Run starts the GitApp application in an event loop.
 func (g *GitApp) Run() {
 	if err := g.app.Run(); err != nil {
 		log.Println(err)

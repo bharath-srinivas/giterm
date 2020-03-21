@@ -5,13 +5,13 @@ import (
 
 	"github.com/bharath-srinivas/giterm/config"
 	"github.com/bharath-srinivas/giterm/modules"
-	"github.com/bharath-srinivas/giterm/views"
 )
 
+// FeedsPage returns the feeds page with pagination and page size options.
 func FeedsPage(app *tview.Application, config config.Config) *Page {
 	feeds := modules.FeedsWidget(app, config)
-	pageSizes := views.PageSizeWidget(feeds)
-	pagination := views.PaginationWidget(feeds)
+	pageSizes := modules.PageSizeWidget(feeds)
+	pagination := modules.PaginationWidget(feeds)
 
 	header := tview.NewFlex().
 		AddItem(pageSizes, 0, 1, false)

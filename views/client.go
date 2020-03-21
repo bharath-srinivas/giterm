@@ -9,6 +9,7 @@ import (
 	"github.com/bharath-srinivas/giterm/config"
 )
 
+// Client represents the github client.
 type Client struct {
 	Username string
 
@@ -16,6 +17,7 @@ type Client struct {
 	context.Context
 }
 
+// NewClient returns a new client with the provided token.
 func NewClient(config config.Config) *Client {
 	ctx := context.Background()
 	client := &Client{
@@ -26,6 +28,7 @@ func NewClient(config config.Config) *Client {
 	return client
 }
 
+// githubClient returns a new github client with the provided token and context.
 func githubClient(config config.Config, context context.Context) *github.Client {
 	tokenSource := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: config.Token},
@@ -34,6 +37,7 @@ func githubClient(config config.Config, context context.Context) *github.Client 
 	return github.NewClient(oauth2Client)
 }
 
+// getUsername returns the username of the current user.
 func (c *Client) getUsername() string {
 	user, _, err := c.Client.Users.Get(c.Context, "")
 	if err != nil || user == nil || user.Login == nil {
