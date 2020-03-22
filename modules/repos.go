@@ -20,7 +20,7 @@ type Repos struct {
 	*github.Response
 }
 
-// RepoWidget return a new instance of repo widget.
+// RepoWidget returns a new instance of repo widget.
 // TODO: convert this widget as text widget
 func RepoWidget(app *tview.Application, config config.Config) *Repos {
 	widget := tview.NewTable().

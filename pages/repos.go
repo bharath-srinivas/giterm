@@ -24,17 +24,18 @@ func ReposPage(app *tview.Application, config config.Config) *Page {
 		AddItem(pagination.Next, 0, 1, false).
 		AddItem(pagination.Last, 0, 1, false)
 
-	view := tview.NewFlex().
+	layout := tview.NewFlex().
 		SetDirection(tview.FlexRow).
 		AddItem(header, 0, 1, false).
 		AddItem(repos, 0, 15, false).
 		AddItem(footer, 0, 1, false)
-	view.SetTitle(string('\U0001F4D5') + " [green::b]Repositories")
-	view.SetBorder(true)
+	layout.SetTitle(string('\U0001F4D5') + " [green::b]Repositories").
+		SetBorder(true)
+
 	return &Page{
 		Name: "Repos",
 		Widgets: &Widgets{
-			Parent: view,
+			Parent: layout,
 			Children: []tview.Primitive{
 				pageSizes,
 				filters,

@@ -22,18 +22,18 @@ func FeedsPage(app *tview.Application, config config.Config) *Page {
 		AddItem(pagination.Next, 0, 1, false).
 		AddItem(pagination.Last, 0, 1, false)
 
-	view := tview.NewFlex().
+	layout := tview.NewFlex().
 		SetDirection(tview.FlexRow).
 		AddItem(header, 0, 1, false).
 		AddItem(feeds, 0, 15, false).
 		AddItem(footer, 0, 1, false)
-	view.SetTitle(string('\U0001F559') + " [green::b]Feeds")
-	view.SetBorder(true)
+	layout.SetTitle(string('\U0001F559') + " [green::b]Feeds").
+		SetBorder(true)
 
 	return &Page{
 		Name: "Feeds",
 		Widgets: &Widgets{
-			Parent: view,
+			Parent: layout,
 			Children: []tview.Primitive{
 				pageSizes,
 				feeds,

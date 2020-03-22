@@ -28,7 +28,7 @@ type Pagination struct {
 	Next  *tview.Button
 }
 
-// PaginationWidget return a new pagination widget that contains buttons to navigate to first, last, previous and next pages.
+// PaginationWidget returns a new pagination widget that contains buttons to navigate to first, last, previous and next pages.
 func PaginationWidget(paginator Paginator) *Pagination {
 	var pagination Pagination
 	pagination.First = createButton(string('\U000000AB')).
@@ -53,7 +53,7 @@ func PaginationWidget(paginator Paginator) *Pagination {
 	return &pagination
 }
 
-// PageSizeWidget return a new drop down widget with different page size options.
+// PageSizeWidget returns a new drop down widget with different page size options.
 func PageSizeWidget(pageSizer PageSizer) *tview.DropDown {
 	pageSizes := tview.NewDropDown().
 		SetLabelColor(tcell.ColorWhite).

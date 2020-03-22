@@ -9,9 +9,21 @@ import (
 
 // ProfilePage returns the profile page.
 func ProfilePage(app *tview.Application, config config.Config) *Page {
-	profile := modules.ProfileWidget(app, config)
+	user := modules.UserWidget(app, config)
+	contribution := modules.ContributionsWidget(app, config)
+
+	layout := tview.NewFlex().
+		AddItem(user, 0, 1, false).
+		AddItem(contribution, 0, 4, false)
+
+	layout.SetTitle(string('\U0001F642') + " [green::b]Profile").
+		SetBorder(true)
+
 	return &Page{
-		Name:    "Profile",
-		Widgets: &Widgets{Parent: profile},
+		Name: "User",
+		Widgets: &Widgets{
+			Parent:   layout,
+			Children: []tview.Primitive{user, contribution},
+		},
 	}
 }
