@@ -23,7 +23,7 @@ func MakePage(app *tview.Application, config config.Config, pageName string) *Pa
 		page = ReposPage(app, config)
 	case "feeds":
 		page = FeedsPage(app, config)
-	case "default":
+	default:
 		page = &Page{
 			Name:    "",
 			Widgets: &Widgets{Parent: tview.NewBox().SetTitle("Unknown").SetBorder(true)},
