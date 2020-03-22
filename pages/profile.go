@@ -20,7 +20,7 @@ func ProfilePage(app *tview.Application, config config.Config) *Page {
 		SetBorder(true)
 
 	return &Page{
-		Name: "User",
+		Name: "Profile",
 		Widgets: &Widgets{
 			Parent:   layout,
 			Children: []tview.Primitive{user, contribution},

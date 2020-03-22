@@ -82,6 +82,10 @@ func (p Pages) Get(name string) *Page {
 
 // Prev returns the previous page name based on the given page name.
 func (p Pages) Prev(currentPage string) string {
+	if currentPage == "" {
+		return ""
+	}
+
 	pageCount := len(p)
 	currentPageIndex := p.getPageIndex(currentPage)
 	prevPageIndex := (currentPageIndex - 1) % pageCount
@@ -93,6 +97,10 @@ func (p Pages) Prev(currentPage string) string {
 
 // Next returns the next page name based on the given page name.
 func (p Pages) Next(currentPage string) string {
+	if currentPage == "" {
+		return ""
+	}
+
 	pageCount := len(p)
 	currentPageIndex := p.getPageIndex(currentPage)
 	nextPageIndex := (currentPageIndex + 1) % pageCount
