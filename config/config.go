@@ -17,18 +17,6 @@ type Config struct {
 
 var config Config
 
-func init() {
-	if err := readConfig(); err != nil {
-		if err, ok := err.(viper.ConfigFileNotFoundError); ok {
-			log.Println("config file not found. please set your personal access token.")
-		} else {
-			log.Println(err.Error())
-		}
-		os.Exit(1)
-	}
-	config.Token = viper.GetString("token")
-}
-
 // New creates a new config file if one does not exist or modifies the existing config file. It returns an error if it
 //fails to do both.
 func New(key, value string) error {
@@ -42,6 +30,15 @@ func New(key, value string) error {
 
 // GetConfig returns the initialized config.
 func GetConfig() Config {
+	if err := readConfig(); err != nil {
+		if err, ok := err.(viper.ConfigFileNotFoundError); ok {
+			log.Println("config file not found. please set your personal access token.")
+		} else {
+			log.Println(err.Error())
+		}
+		os.Exit(1)
+	}
+	config.Token = viper.GetString("token")
 	return config
 }
 
