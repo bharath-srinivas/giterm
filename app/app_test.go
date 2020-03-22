@@ -5,9 +5,12 @@ import (
 	"testing"
 
 	"github.com/rivo/tview"
+
+	"github.com/bharath-srinivas/giterm/config"
 )
 
 func Test_New(t *testing.T) {
+	_ = config.New("test_token", "testOauthToken456")
 	gitApp := New(tview.NewApplication())
 	expectedType := "*app.GitApp"
 	returnType := reflect.TypeOf(gitApp).String()
