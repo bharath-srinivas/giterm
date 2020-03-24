@@ -10,11 +10,10 @@ import (
 )
 
 func Test_New(t *testing.T) {
-	_ = config.New("test_token", "testOauthToken456")
-	gitApp := New(tview.NewApplication())
+	gitApp := New(tview.NewApplication(), config.Config{})
 	expectedType := "*app.GitApp"
 	returnType := reflect.TypeOf(gitApp).String()
 	if returnType != expectedType {
-		t.Errorf("New returned incorrect type, got: %s, want: %s", returnType, expectedType)
+		t.Errorf("Write returned incorrect type, got: %s, want: %s", returnType, expectedType)
 	}
 }

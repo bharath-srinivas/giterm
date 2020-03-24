@@ -2,9 +2,6 @@
 package app
 
 import (
-	"log"
-	"os"
-
 	"github.com/rivo/tview"
 
 	"github.com/bharath-srinivas/giterm/config"
@@ -19,13 +16,12 @@ type GitApp struct {
 }
 
 // New returns a new instance of GitApp.
-func New(app *tview.Application) *GitApp {
+func New(app *tview.Application, config config.Config) *GitApp {
 	gitApp := &GitApp{
 		app:   app,
 		pages: tview.NewPages(),
 	}
-	cfg := config.GetConfig()
-	gitApp.appPages = pages.MakePages(app, cfg)
+	gitApp.appPages = pages.MakePages(app, config)
 	for _, page := range gitApp.appPages {
 		gitApp.pages.AddPage(page.Name, page.Widgets.Parent, true, false)
 	}
@@ -36,9 +32,6 @@ func New(app *tview.Application) *GitApp {
 }
 
 // Run starts the GitApp application in an event loop.
-func (g *GitApp) Run() {
-	if err := g.app.Run(); err != nil {
-		log.Println(err)
-		os.Exit(1)
-	}
+func (g *GitApp) Run() error {
+	return g.app.Run()
 }

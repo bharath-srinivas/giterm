@@ -13,30 +13,46 @@ import (
 	"github.com/bharath-srinivas/giterm/config"
 )
 
+var version = "v0.1.0"
+
 func init() {
-	pflag.String("token", "", "your github personal access token")
+	pflag.StringP("token", "t", "", "your github personal access token or oauth token")
+	pflag.BoolP("help", "h", false, "prints this message")
+	pflag.BoolP("version", "v", false, "prints the version")
 }
 
-// sets the personal access token
-func setToken() {
-	token := viper.GetString("token")
-	if token == "" {
-		log.Fatal(fmt.Errorf("token cannot be empty"))
-	} else if err := config.New("token", token); err != nil {
-		log.Fatal(err.Error())
+func visitFlags(flag *pflag.Flag) {
+	if flag.Name == "help" {
+		pflag.Usage()
+		os.Exit(0)
 	}
-	fmt.Println("token set successfully.")
+	if flag.Name == "version" {
+		fmt.Println(version)
+		os.Exit(0)
+	}
+	if flag.Name == "token" {
+		_ = viper.BindPFlag(flag.Name, pflag.Lookup(flag.Name))
+		if err := config.Write(); err != nil {
+			log.Fatal(err.Error())
+		}
+		fmt.Println("token set successfully!")
+		os.Exit(0)
+	}
 }
 
 func main() {
 	pflag.Parse()
-	pflag.Visit(func(flag *pflag.Flag) {
-		if flag.Name == "token" {
-			_ = viper.BindPFlags(pflag.CommandLine)
-			setToken()
-			os.Exit(0)
-		}
-	})
-	gitApp := app.New(tview.NewApplication())
-	gitApp.Run()
+	pflag.Visit(visitFlags)
+
+	cfg, err := config.GetConfig()
+	if err != nil {
+		log.Println(err.Error())
+		os.Exit(1)
+	}
+
+	gitApp := app.New(tview.NewApplication(), cfg)
+	if err := gitApp.Run(); err != nil {
+		log.Println(err)
+		os.Exit(1)
+	}
 }

@@ -2,7 +2,7 @@
 package config
 
 import (
-	"log"
+	"errors"
 	"os"
 	"os/user"
 	"path"
@@ -15,55 +15,55 @@ type Config struct {
 	Token string
 }
 
-var config Config
-
-// New creates a new config file if one does not exist or modifies the existing config file. It returns an error if it
+// Write creates a new config file if one does not exist or modifies the existing config file. It returns an error if it
 //fails to do both.
-func New(key, value string) error {
-	setConfigPath()
-	viper.Set(key, value)
+func Write() error {
+	_ = readConfig()
 	if err := viper.WriteConfig(); err != nil {
 		return viper.SafeWriteConfig()
 	}
 	return nil
 }
 
-// GetConfig returns the initialized config.
-func GetConfig() Config {
+// GetConfig returns an instance of config.
+func GetConfig() (Config, error) {
+	var config Config
 	if err := readConfig(); err != nil {
 		if err, ok := err.(viper.ConfigFileNotFoundError); ok {
-			log.Println("config file not found. please set your personal access token.")
+			return config, errors.New("config file not found. please set your personal access token")
 		} else {
-			log.Println(err.Error())
+			return config, err
 		}
-		os.Exit(1)
 	}
 	config.Token = viper.GetString("token")
-	return config
+	return config, nil
 }
 
 // setConfigPath sets the config path if it exists already or creates a new one if it doesn't exist and set the newly created config path.
-func setConfigPath() {
+func setConfigPath() error {
 	usr, err := user.Current()
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	configDir := ".giterm"
 	configPath := path.Join(usr.HomeDir, configDir)
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		if err := os.Mkdir(configPath, 0777); err != nil {
-			log.Fatal(err.Error())
+			return err
 		}
 	}
 
 	viper.AddConfigPath(configPath)
 	viper.SetConfigName("config")
 	viper.SetConfigType("json")
+	return nil
 }
 
 // readConfig reads the config file from the set config path and returns an error if it fails to find the config file.
 func readConfig() error {
-	setConfigPath()
+	if err := setConfigPath(); err != nil {
+		return err
+	}
 	return viper.ReadInConfig()
 }

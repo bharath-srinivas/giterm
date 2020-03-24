@@ -3,18 +3,20 @@ package config
 import (
 	"reflect"
 	"testing"
+
+	"github.com/spf13/viper"
 )
 
-func Test_New(t *testing.T) {
-	err := New("test_token", "aTestOauthToken123")
+func Test_Write(t *testing.T) {
+	viper.Set("test_token", "aTestOauthToken123")
 	expected := ""
-	if err != nil {
+	if err := Write(); err != nil {
 		t.Errorf("got: %s, want: %s", err.Error(), expected)
 	}
 }
 
 func Test_GetConfig(t *testing.T) {
-	config := GetConfig()
+	config, _ := GetConfig()
 	expectedType := "config.Config"
 	returnType := reflect.TypeOf(config).String()
 	if returnType != expectedType {
