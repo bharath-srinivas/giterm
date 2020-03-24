@@ -29,11 +29,10 @@ func Write() error {
 func GetConfig() (Config, error) {
 	var config Config
 	if err := readConfig(); err != nil {
-		if err, ok := err.(viper.ConfigFileNotFoundError); ok {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			return config, errors.New("config file not found. please set your personal access token")
-		} else {
-			return config, err
 		}
+		return config, err
 	}
 	config.Token = viper.GetString("token")
 	return config, nil
