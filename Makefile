@@ -3,9 +3,6 @@ BUILD_DIR = $(shell pwd)
 GO_VERSION = $(shell go version | cut -d ' ' -f 3 | sed -e 's/go//')
 LDFLAGS = -ldflags="-s -w"
 
-# Disable CGO
-export CGO_ENABLED=0
-
 all: clean test build
 
 # Test all packages.
