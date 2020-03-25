@@ -10,7 +10,6 @@ install: true
 before_script:
   - GO_FILES=$(find . -iname '*.go' -type f | grep -v /vendor/)
   - go get -t ./...
-  - export CGO_ENABLED=0
 
 script:
   - test -z $(gofmt -s -l $GO_FILES)

@@ -122,7 +122,7 @@ func (c *Contributions) parseContributions() error {
 			go c.parseIssues(activity, contribActivities.issues)
 		case "CreateEvent":
 			c.wg.Add(1)
-			go c.parseCreates(activity, contribActivities.creates, contribActivities.commits)
+			go c.parseCreates(activity, contribActivities.creates)
 		case "ForkEvent":
 			c.wg.Add(1)
 			go c.parseForks(activity, contribActivities.creates)
@@ -189,16 +189,13 @@ func (c *Contributions) parseIssues(event *github.Event, issueMap map[string]int
 
 // parseCreates parses the created repositories data from the provided event and updates both the provided create map
 //and commit map with parsed information.
-func (c *Contributions) parseCreates(event *github.Event, createMap map[string]string, commitMap map[string]int) {
+func (c *Contributions) parseCreates(event *github.Event, createMap map[string]string) {
 	defer c.wg.Done()
 	payload, _ := event.ParsePayload()
 	if payload.(*github.CreateEvent).GetRefType() == "repository" {
 		repoName := event.GetRepo().GetName()
 		createdAt := event.GetCreatedAt().Format("Jan 02")
 		createMap[repoName] = createdAt
-		if _, ok := commitMap[repoName]; ok {
-			commitMap[repoName] += 1
-		}
 	}
 }
 
@@ -252,15 +249,22 @@ func (c *Contributions) getCommitNode(key string) *tview.TreeNode {
 	if totalRepoCount < 1 {
 		return nil
 	}
+
+	createdRepos := c.nodes[key].creates
 	var totalCommits int
 	var childNodes []*tview.TreeNode
 	for repo, commitCount := range c.nodes[key].commits {
+		// special condition to keep track of initial commit in a repository
+		if _, ok := createdRepos[repo]; ok {
+			commitCount += 1
+		}
 		commitText := pluralize("commit", commitCount)
 		text := fmt.Sprintf(" [white]%s  [gray::d]%d %s", repo, commitCount, commitText)
 		child := tview.NewTreeNode(text).SetSelectable(false)
 		childNodes = append(childNodes, child)
 		totalCommits += commitCount
 	}
+
 	commitText := pluralize("commit", totalCommits)
 	repoText := pluralize("repository", totalRepoCount)
 	text := fmt.Sprintf(" [::b]Created %d %s in %d %s", totalCommits, commitText, totalRepoCount, repoText)
