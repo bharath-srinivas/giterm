@@ -14,5 +14,8 @@ before_script:
 
 script:
   - test -z $(gofmt -s -l $GO_FILES)
-  - go test -v ./...
+  - go test -v ./... -coverprofile=coverage.text -covermode=count
   - go vet ./...
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
