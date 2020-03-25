@@ -10,7 +10,7 @@ all: clean test build
 
 # Test all packages.
 test:
-	@go test -cover ./...
+	@go test -v ./... -covermode=count -coverprofile=coverage.out
 .PHONY: test
 
 # Build linux binaries.

@@ -14,7 +14,7 @@ before_script:
 
 script:
   - test -z $(gofmt -s -l $GO_FILES)
-  - go test -v ./... -coverprofile=coverage.text -covermode=count
+  - make test
   - go vet ./...
 
 after_success:
