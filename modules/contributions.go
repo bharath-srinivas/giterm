@@ -22,13 +22,23 @@ type Contributions struct {
 	nodes map[string]contributionActivities
 }
 
+type stats struct {
+	statMap map[string]int
+	mu      sync.Mutex
+}
+
+type creations struct {
+	creationMap map[string]string
+	mu          sync.Mutex
+}
+
 // contributionActivities represents various github contribution activities.
 type contributionActivities struct {
-	commits            map[string]int
-	creates            map[string]string
-	pullRequests       map[string]int
-	pullRequestReviews map[string]int
-	issues             map[string]int
+	commits            *stats
+	creates            *creations
+	pullRequests       *stats
+	pullRequestReviews *stats
+	issues             *stats
 }
 
 // ContributionsWidget returns a new instance of contribution widget.
@@ -100,11 +110,11 @@ func (c *Contributions) parseContributions() error {
 		node := activity.GetCreatedAt().Format("January 2006")
 		if _, ok := c.nodes[node]; !ok {
 			contribActivities = contributionActivities{
-				commits:            make(map[string]int, 0),
-				creates:            make(map[string]string, 0),
-				pullRequests:       make(map[string]int, 0),
-				pullRequestReviews: make(map[string]int, 0),
-				issues:             make(map[string]int, 0),
+				commits:            &stats{make(map[string]int, 0), sync.Mutex{}},
+				creates:            &creations{make(map[string]string, 0), sync.Mutex{}},
+				pullRequests:       &stats{make(map[string]int, 0), sync.Mutex{}},
+				pullRequestReviews: &stats{make(map[string]int, 0), sync.Mutex{}},
+				issues:             &stats{make(map[string]int, 0), sync.Mutex{}},
 			}
 		}
 		switch *activity.Type {
@@ -134,7 +144,7 @@ func (c *Contributions) parseContributions() error {
 }
 
 // parseCommits parses the commits data from the provided event and updates the provided commit map with parsed information.
-func (c *Contributions) parseCommits(event *github.Event, commitMap map[string]int) {
+func (c *Contributions) parseCommits(event *github.Event, stats *stats) {
 	defer c.wg.Done()
 	repoId := event.GetRepo().GetID()
 	repo, _ := c.getRepoById(repoId)
@@ -143,13 +153,15 @@ func (c *Contributions) parseCommits(event *github.Event, commitMap map[string]i
 	if !repo.GetFork() && payload.(*github.PushEvent).GetRef() == ref {
 		commitCount := payload.(*github.PushEvent).GetSize()
 		repoName := event.GetRepo().GetName()
-		commitMap[repoName] += commitCount
+		stats.mu.Lock()
+		stats.statMap[repoName] += commitCount
+		stats.mu.Unlock()
 	}
 }
 
 // parsePullRequests parses the pull requests data from the provided event and updates the provided  pull request map
 //with parsed information.
-func (c *Contributions) parsePullRequests(event *github.Event, pullRequestMap map[string]int) {
+func (c *Contributions) parsePullRequests(event *github.Event, stats *stats) {
 	defer c.wg.Done()
 	repoId := event.GetRepo().GetID()
 	repo, _ := c.getRepoById(repoId)
@@ -157,25 +169,29 @@ func (c *Contributions) parsePullRequests(event *github.Event, pullRequestMap ma
 		payload, _ := event.ParsePayload()
 		if payload.(*github.PullRequestEvent).GetAction() == "opened" {
 			repoName := event.GetRepo().GetName()
-			pullRequestMap[repoName] += 1
+			stats.mu.Lock()
+			stats.statMap[repoName] += 1
+			stats.mu.Unlock()
 		}
 	}
 }
 
 // parsePullRequestReviews parses the pull request reviews data from the provided event and updates the provided
 //pull request review map with parsed information.
-func (c *Contributions) parsePullRequestReviews(event *github.Event, pullRequestReviewMap map[string]int) {
+func (c *Contributions) parsePullRequestReviews(event *github.Event, stats *stats) {
 	defer c.wg.Done()
 	repoId := event.GetRepo().GetID()
 	repo, _ := c.getRepoById(repoId)
 	if !repo.GetFork() {
 		repoName := event.GetRepo().GetName()
-		pullRequestReviewMap[repoName] += 1
+		stats.mu.Lock()
+		stats.statMap[repoName] += 1
+		stats.mu.Unlock()
 	}
 }
 
 // parseIssues parses the issues data from the provided event and updates the provided issues map with parsed information.
-func (c *Contributions) parseIssues(event *github.Event, issueMap map[string]int) {
+func (c *Contributions) parseIssues(event *github.Event, stats *stats) {
 	defer c.wg.Done()
 	repoId := event.GetRepo().GetID()
 	repo, _ := c.getRepoById(repoId)
@@ -183,29 +199,35 @@ func (c *Contributions) parseIssues(event *github.Event, issueMap map[string]int
 	action := payload.(*github.IssuesEvent).GetAction()
 	if !repo.GetFork() && action == "opened" {
 		repoName := event.GetRepo().GetName()
-		issueMap[repoName] += 1
+		stats.mu.Lock()
+		stats.statMap[repoName] += 1
+		stats.mu.Unlock()
 	}
 }
 
 // parseCreates parses the created repositories data from the provided event and updates both the provided create map
 //and commit map with parsed information.
-func (c *Contributions) parseCreates(event *github.Event, createMap map[string]string) {
+func (c *Contributions) parseCreates(event *github.Event, creations *creations) {
 	defer c.wg.Done()
 	payload, _ := event.ParsePayload()
 	if payload.(*github.CreateEvent).GetRefType() == "repository" {
 		repoName := event.GetRepo().GetName()
 		createdAt := event.GetCreatedAt().Format("Jan 02")
-		createMap[repoName] = createdAt
+		creations.mu.Lock()
+		creations.creationMap[repoName] = createdAt
+		creations.mu.Unlock()
 	}
 }
 
 // parseForks parses the forks data from the provided event and updates the provided fork map with parsed information.
-func (c *Contributions) parseForks(event *github.Event, forkMap map[string]string) {
+func (c *Contributions) parseForks(event *github.Event, creations *creations) {
 	defer c.wg.Done()
 	payload, _ := event.ParsePayload()
 	repoName := payload.(*github.ForkEvent).GetForkee().GetFullName()
 	createdAt := event.GetCreatedAt().Format("Jan 02")
-	forkMap[repoName] = createdAt
+	creations.mu.Lock()
+	creations.creationMap[repoName] = createdAt
+	creations.mu.Unlock()
 }
 
 // getContributionData retrieves the contribution data of a user for the past 90 days. Refer to
@@ -245,15 +267,15 @@ func (c *Contributions) createRootNode(text string) {
 
 // getCommitNode returns the tree node with commits data for a given key, which is the month.
 func (c *Contributions) getCommitNode(key string) *tview.TreeNode {
-	totalRepoCount := len(c.nodes[key].commits)
+	totalRepoCount := len(c.nodes[key].commits.statMap)
 	if totalRepoCount < 1 {
 		return nil
 	}
 
-	createdRepos := c.nodes[key].creates
+	createdRepos := c.nodes[key].creates.creationMap
 	var totalCommits int
 	var childNodes []*tview.TreeNode
-	for repo, commitCount := range c.nodes[key].commits {
+	for repo, commitCount := range c.nodes[key].commits.statMap {
 		// special condition to keep track of initial commit in a repository
 		if _, ok := createdRepos[repo]; ok {
 			commitCount += 1
@@ -275,13 +297,13 @@ func (c *Contributions) getCommitNode(key string) *tview.TreeNode {
 
 // getCreateNode returns the tree node with created repositories data for a given key, which is the month.
 func (c *Contributions) getCreateNode(key string) *tview.TreeNode {
-	totalRepoCount := len(c.nodes[key].creates)
+	totalRepoCount := len(c.nodes[key].creates.creationMap)
 	if totalRepoCount < 1 {
 		return nil
 	}
 
 	var childNodes []*tview.TreeNode
-	for repo, createdAt := range c.nodes[key].creates {
+	for repo, createdAt := range c.nodes[key].creates.creationMap {
 		text := fmt.Sprintf(" [white]%s  [gray::d]%s", repo, createdAt)
 		child := tview.NewTreeNode(text).SetSelectable(false)
 		childNodes = append(childNodes, child)
@@ -296,14 +318,14 @@ func (c *Contributions) getCreateNode(key string) *tview.TreeNode {
 
 // getPullRequestNode returns the tree node with pull requests data for a given key, which is the month.
 func (c *Contributions) getPullRequestNode(key string) *tview.TreeNode {
-	totalRepoCount := len(c.nodes[key].pullRequests)
+	totalRepoCount := len(c.nodes[key].pullRequests.statMap)
 	if totalRepoCount < 1 {
 		return nil
 	}
 
 	var totalPrCount int
 	var childNodes []*tview.TreeNode
-	for repo, prCount := range c.nodes[key].pullRequests {
+	for repo, prCount := range c.nodes[key].pullRequests.statMap {
 		prText := pluralize("pull request", prCount)
 		text := fmt.Sprintf(" [white]%s  [gray::d]%d %s", repo, prCount, prText)
 		child := tview.NewTreeNode(text).SetSelectable(false)
@@ -321,14 +343,14 @@ func (c *Contributions) getPullRequestNode(key string) *tview.TreeNode {
 
 // getPullRequestReviewNode returns the tree node with pull request reviews data for a given key, which is the month.
 func (c *Contributions) getPullRequestReviewNode(key string) *tview.TreeNode {
-	totalRepoCount := len(c.nodes[key].pullRequestReviews)
+	totalRepoCount := len(c.nodes[key].pullRequestReviews.statMap)
 	if totalRepoCount < 1 {
 		return nil
 	}
 
 	var totalReviewCount int
 	var childNodes []*tview.TreeNode
-	for repo, reviewCount := range c.nodes[key].pullRequestReviews {
+	for repo, reviewCount := range c.nodes[key].pullRequestReviews.statMap {
 		reviewText := pluralize("pull request", reviewCount)
 		text := fmt.Sprintf(" [white]%s  [gray::d]%d %s", repo, reviewCount, reviewText)
 		child := tview.NewTreeNode(text).SetSelectable(false)
@@ -346,14 +368,14 @@ func (c *Contributions) getPullRequestReviewNode(key string) *tview.TreeNode {
 
 // getIssueNode returns the tree node with issues data for a given key, which is the month.
 func (c *Contributions) getIssueNode(key string) *tview.TreeNode {
-	totalRepoCount := len(c.nodes[key].issues)
+	totalRepoCount := len(c.nodes[key].issues.statMap)
 	if totalRepoCount < 1 {
 		return nil
 	}
 
 	var totalIssueCount int
 	var childNodes []*tview.TreeNode
-	for repo, issueCount := range c.nodes[key].issues {
+	for repo, issueCount := range c.nodes[key].issues.statMap {
 		issueText := pluralize("issue", issueCount)
 		text := fmt.Sprintf(" [white]%s  [gray::d]%d %s", repo, issueCount, issueText)
 		child := tview.NewTreeNode(text).SetSelectable(false)
