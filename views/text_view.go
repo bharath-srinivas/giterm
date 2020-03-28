@@ -16,8 +16,7 @@ type TextWidget struct {
 func NewTextView(app *tview.Application, config config.Config, bordered bool) *TextWidget {
 	widget := tview.NewTextView().
 		SetDynamicColors(true).
-		SetScrollable(true).
-		SetTextAlign(tview.AlignCenter)
+		SetScrollable(true)
 	widget.SetBorder(bordered)
 	return &TextWidget{
 		Base:     NewBase(app, config),

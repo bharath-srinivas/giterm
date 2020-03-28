@@ -22,6 +22,7 @@ type Feeds struct {
 // FeedsWidget returns a new instance of feeds widget.
 func FeedsWidget(app *tview.Application, config config.Config) *Feeds {
 	widget := views.NewTextView(app, config, true)
+	widget.SetTextAlign(tview.AlignCenter)
 	return &Feeds{
 		TextWidget:  widget,
 		ListOptions: &github.ListOptions{},
