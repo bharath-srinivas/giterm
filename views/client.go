@@ -9,6 +9,9 @@ import (
 	"github.com/bharath-srinivas/giterm/config"
 )
 
+// user holds the github user information.
+var user *github.User
+
 // Client represents the github client.
 type Client struct {
 	Username string
@@ -24,8 +27,13 @@ func NewClient(config config.Config) *Client {
 		Client:  githubClient(ctx, config),
 		Context: ctx,
 	}
-	client.Username = client.getUsername()
+	client.getUsername()
 	return client
+}
+
+// GetUser returns the current github user.
+func (c *Client) GetUser() *github.User {
+	return user
 }
 
 // githubClient returns a new github client with the provided token and context.
@@ -38,10 +46,12 @@ func githubClient(context context.Context, config config.Config) *github.Client 
 }
 
 // getUsername returns the username of the current user.
-func (c *Client) getUsername() string {
-	user, _, err := c.Client.Users.Get(c.Context, "")
-	if err != nil || user == nil || user.Login == nil {
-		return ""
+func (c *Client) getUsername() {
+	u, _, err := c.Client.Users.Get(c.Context, "")
+	if err != nil {
+		c.Username = ""
+		return
 	}
-	return *user.Login
+	c.Username = u.GetLogin()
+	user = u
 }

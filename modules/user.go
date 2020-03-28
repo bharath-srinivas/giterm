@@ -2,15 +2,13 @@ package modules
 
 import (
 	"fmt"
+
 	"github.com/google/go-github/v29/github"
 	"github.com/rivo/tview"
 
 	"github.com/bharath-srinivas/giterm/config"
 	"github.com/bharath-srinivas/giterm/views"
 )
-
-// user holds the github user information.
-var user *github.User
 
 // User represents a github user.
 type User struct {
@@ -34,9 +32,8 @@ func (u *User) Refresh() {
 
 // display renders the user data in a text view.
 func (u *User) display() {
-	var err error
-	user, _, err = u.Client.Users.Get(u.Context, "")
-	if err != nil {
+	user := u.Client.GetUser()
+	if user == nil {
 		_, _ = fmt.Fprint(u, "[::b]an error occurred while retrieving user data")
 		return
 	}
@@ -70,8 +67,9 @@ func (u *UserStats) Refresh() {
 	u.Redraw(u.display)
 }
 
-// display renders the user data in a text view.
+// display renders the user stats data in a text view.
 func (u *UserStats) display() {
+	user := u.Client.GetUser()
 	if user == nil {
 		_, _ = fmt.Fprint(u, "[::b]an error occurred while retrieving user data")
 		return
