@@ -3,7 +3,7 @@ package views
 import (
 	"context"
 
-	"github.com/google/go-github/v29/github"
+	"github.com/google/go-github/v30/github"
 	"golang.org/x/oauth2"
 
 	"github.com/bharath-srinivas/giterm/config"

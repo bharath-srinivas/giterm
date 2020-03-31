@@ -3,7 +3,7 @@ package modules
 import (
 	"fmt"
 
-	"github.com/google/go-github/v29/github"
+	"github.com/google/go-github/v30/github"
 	"github.com/rivo/tview"
 
 	"github.com/bharath-srinivas/giterm/config"
