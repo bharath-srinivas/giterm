@@ -185,7 +185,7 @@ func TestPages_Prev(t *testing.T) {
 		{
 			name:     "valid page",
 			pageName: "Profile",
-			expected: "Feeds",
+			expected: "Notifications",
 		},
 	}
 
@@ -214,7 +214,7 @@ func TestPages_Next(t *testing.T) {
 		{
 			name:     "valid page",
 			pageName: "Feeds",
-			expected: "Profile",
+			expected: "Notifications",
 		},
 	}
 
