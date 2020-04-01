@@ -87,8 +87,14 @@ func (f *Feeds) display(options *github.ListOptions) {
 	for _, event := range events {
 		switch *event.Type {
 		case "CreateEvent":
+			payload, _ := event.ParsePayload()
+			if payload.(*github.CreateEvent).GetRefType() == "repository" {
+				time := timeago.NoMax(timeago.English).Format(event.GetCreatedAt())
+				_, _ = fmt.Fprintf(f.TextView, "[::b]%s [::d]created a repository [::b]%s [gray::d]%s\n\n", event.Actor.GetLogin(), event.Repo.GetName(), time)
+			}
+		case "PushEvent":
 			time := timeago.NoMax(timeago.English).Format(event.GetCreatedAt())
-			_, _ = fmt.Fprintf(f.TextView, "[::b]%s [::d]created a repository [::b]%s [gray::d]%s\n\n", event.Actor.GetLogin(), event.Repo.GetName(), time)
+			_, _ = fmt.Fprintf(f.TextView, "[::b]%s [::d]pushed to [::b]%s [gray::d]%s\n\n", event.Actor.GetLogin(), event.Repo.GetName(), time)
 		case "ForkEvent":
 			payload, _ := event.ParsePayload()
 			fork := payload.(*github.ForkEvent).Forkee.GetFullName()
