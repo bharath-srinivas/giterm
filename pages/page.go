@@ -23,6 +23,8 @@ func MakePage(app *tview.Application, config config.Config, pageName string) *Pa
 		page = ReposPage(app, config)
 	case "feeds":
 		page = FeedsPage(app, config)
+	case "notifications":
+		page = NotificationsPage(app, config)
 	default:
 		page = &Page{
 			Name:    "",
@@ -63,7 +65,7 @@ type Pages []*Page
 // MakePages returns all the pages needed by the application.
 func MakePages(app *tview.Application, config config.Config) Pages {
 	var p Pages
-	pages := []string{"feeds", "profile", "repos"}
+	pages := []string{"feeds", "notifications", "profile", "repos"}
 	for _, pageName := range pages {
 		p = append(p, MakePage(app, config, pageName))
 	}

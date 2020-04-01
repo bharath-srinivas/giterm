@@ -7,6 +7,7 @@ require (
 	github.com/gdamore/tcell v1.3.0
 	github.com/golang/protobuf v1.3.4 // indirect
 	github.com/google/go-github/v30 v30.1.0
+	github.com/olekukonko/tablewriter v0.0.4
 	github.com/rivo/tview v0.0.0-20200219210816-cd38d7432498
 	github.com/spf13/pflag v1.0.3
 	github.com/spf13/viper v1.6.2
