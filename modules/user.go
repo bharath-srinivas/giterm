@@ -2,13 +2,49 @@ package modules
 
 import (
 	"fmt"
+	"regexp"
 
-	"github.com/google/go-github/v30/github"
 	"github.com/rivo/tview"
 
 	"github.com/bharath-srinivas/giterm/config"
 	"github.com/bharath-srinivas/giterm/views"
 )
+
+// userQuery represents a graphql query.
+type userQuery struct {
+	Viewer struct {
+		AvatarUrl                string
+		Name                     string
+		Login                    string
+		Bio                      string
+		Company                  string
+		Location                 string
+		Email                    string
+		WebsiteUrl               string
+		IsDeveloperProgramMember bool
+		Followers                struct {
+			TotalCount int
+		}
+		Following struct {
+			TotalCount int
+		}
+		Organizations struct {
+			TotalCount int
+		}
+		StarredRepositories struct {
+			TotalCount int
+		}
+		Repositories struct {
+			TotalCount int
+		}
+		Gists struct {
+			TotalCount int
+		}
+	}
+}
+
+// user holds the github user information.
+var user userQuery
 
 // User represents a github user.
 type User struct {
@@ -18,7 +54,8 @@ type User struct {
 // UserWidget returns a new instance of user widget.
 func UserWidget(app *tview.Application, config config.Config) *User {
 	widget := views.NewTextView(app, config, true)
-	widget.SetWrap(false).
+	widget.SetWrap(true).
+		SetWordWrap(true).
 		SetTitle(string('\U0001F464') + " [green::b]User")
 	u := &User{TextWidget: widget}
 	go u.Refresh()
@@ -30,21 +67,40 @@ func (u *User) Refresh() {
 	u.Redraw(u.display)
 }
 
-// display renders the user data in a text view.
+// display renders the user information in a text view.
 func (u *User) display() {
-	user := u.Client.GetUser()
-	if user == nil {
+	if err := u.GqlClient.Query(u.Context, &user, nil); err != nil {
 		_, _ = fmt.Fprint(u, "[::b]an error occurred while retrieving user data")
 		return
 	}
 
-	_, _ = fmt.Fprintf(u, "[gray::b]%s: [white]%s\n", "Name", user.GetName())
-	_, _ = fmt.Fprintf(u, "[gray::b]%s: [white]%s\n", "Username", user.GetLogin())
-	_, _ = fmt.Fprintf(u, "[gray::b]%s: [white]%s\n", "Bio", user.GetBio())
-	_, _ = fmt.Fprintf(u, "[gray::b]%s: [white]%s\n", "Company", user.GetCompany())
-	_, _ = fmt.Fprintf(u, "[gray::b]%s: [white]%s\n", "Location", user.GetLocation())
-	_, _ = fmt.Fprintf(u, "[gray::b]%s: [white]%s\n", "Email", user.GetEmail())
-	_, _ = fmt.Fprintf(u, "[gray::b]%s: [white]%s\n", "Blog", user.GetBlog())
+	bio := user.Viewer.Bio
+	r := regexp.MustCompile(`([@A-Z])\b\w+`)
+	bio = r.ReplaceAllStringFunc(bio, func(s string) string {
+		return "[::b]" + s + "[::-]"
+	})
+
+	_, _ = fmt.Fprintf(u, formatText("", user.Viewer.Name, "[::b]", "\n"))
+	_, _ = fmt.Fprintf(u, formatText("", user.Viewer.Login, "[gray::d]", "\n\n"))
+	_, _ = fmt.Fprintf(u, formatText("", bio, "", "\n\n"))
+	_, _ = fmt.Fprintf(u, formatText(string('\U0001F465'), user.Viewer.Company, "[::b]", "\n\n"))
+	_, _ = fmt.Fprintf(u, formatText(string('\U0001F4CD'), user.Viewer.Location, "", "\n\n"))
+	_, _ = fmt.Fprintf(u, formatText(string('\u2709'), user.Viewer.Email, "", "\n\n"))
+	_, _ = fmt.Fprintf(u, formatText(string('\U0001F517'), user.Viewer.WebsiteUrl, "", "\n\n"))
+	if user.Viewer.IsDeveloperProgramMember {
+		_, _ = fmt.Fprintln(u, "[::b]Developer Program Member")
+	}
+}
+
+// formatText is a helper function that returns a formatted string with the provided title, prefix and suffix.
+func formatText(title, text, prefix, suffix string) string {
+	if text == "" {
+		return ""
+	}
+	if title == "" {
+		return prefix + text + suffix
+	}
+	return title + " " + prefix + text + suffix
 }
 
 // UserStats represents various stats of a github user.
@@ -69,27 +125,15 @@ func (u *UserStats) Refresh() {
 
 // display renders the user stats data in a text view.
 func (u *UserStats) display() {
-	user := u.Client.GetUser()
-	if user == nil {
+	if user == (userQuery{}) {
 		_, _ = fmt.Fprint(u, "[::b]an error occurred while retrieving user data")
 		return
 	}
 
-	organizations, _, err := u.Client.Organizations.List(u.Context, "", &github.ListOptions{
-		Page:    1,
-		PerPage: 100,
-	})
-	if err != nil {
-		_, _ = fmt.Fprint(u, "[::b]an error occurred while retrieving user data")
-		return
-	}
-
-	orgCount := len(organizations)
-	totalRepos := user.GetPublicRepos() + user.GetTotalPrivateRepos()
-	totalGists := user.GetPublicGists() + user.GetPrivateGists()
-	_, _ = fmt.Fprintf(u, "[gray::b]%s: [white]%d\n", "Repositories", totalRepos)
-	_, _ = fmt.Fprintf(u, "[gray::b]%s: [white]%d\n", "Gists", totalGists)
-	_, _ = fmt.Fprintf(u, "[gray::b]%s: [white]%d\n", "Organizations", orgCount)
-	_, _ = fmt.Fprintf(u, "[gray::b]%s: [white]%d\n", "Followers", user.GetFollowers())
-	_, _ = fmt.Fprintf(u, "[gray::b]%s: [white]%d\n", "Following", user.GetFollowing())
+	_, _ = fmt.Fprintf(u, "[gray::b]%s: [white]%d\n", "Repositories", user.Viewer.Repositories.TotalCount)
+	_, _ = fmt.Fprintf(u, "[gray::b]%s: [white]%d\n", "Gists", user.Viewer.Gists.TotalCount)
+	_, _ = fmt.Fprintf(u, "[gray::b]%s: [white]%d\n", "Organizations", user.Viewer.Organizations.TotalCount)
+	_, _ = fmt.Fprintf(u, "[gray::b]%s: [white]%d\n", "Starred", user.Viewer.StarredRepositories.TotalCount)
+	_, _ = fmt.Fprintf(u, "[gray::b]%s: [white]%d\n", "Followers", user.Viewer.Followers.TotalCount)
+	_, _ = fmt.Fprintf(u, "[gray::b]%s: [white]%d\n", "Following", user.Viewer.Following.TotalCount)
 }
