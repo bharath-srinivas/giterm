@@ -17,6 +17,7 @@ var version = "v0.1.0"
 
 func init() {
 	pflag.StringP("token", "t", "", "your github personal access token or oauth token")
+	pflag.StringP("feeds-url", "f", "", "your github private feeds URL")
 	pflag.BoolP("help", "h", false, "prints this message")
 	pflag.BoolP("version", "v", false, "prints the version")
 }
@@ -35,7 +36,15 @@ func visitFlags(flag *pflag.Flag) {
 		if err := config.Write(); err != nil {
 			log.Fatal(err.Error())
 		}
-		fmt.Println("token set successfully!")
+		fmt.Println("success!")
+		os.Exit(0)
+	}
+	if flag.Name == "feeds-url" {
+		_ = viper.BindPFlag("feeds_url", pflag.Lookup(flag.Name))
+		if err := config.Write(); err != nil {
+			log.Fatal(err.Error())
+		}
+		fmt.Println("success!")
 		os.Exit(0)
 	}
 }

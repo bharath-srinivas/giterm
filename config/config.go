@@ -12,7 +12,8 @@ import (
 
 // Config represents the configuration fields of the giterm app.
 type Config struct {
-	Token string
+	Token    string
+	FeedsUrl string
 }
 
 // Write creates a new config file if one does not exist or modifies the existing config file. It returns an error if it
@@ -35,6 +36,7 @@ func GetConfig() (Config, error) {
 		return config, err
 	}
 	config.Token = viper.GetString("token")
+	config.FeedsUrl = viper.GetString("feeds_url")
 	return config, nil
 }
 

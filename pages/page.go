@@ -66,6 +66,10 @@ type Pages []*Page
 func MakePages(app *tview.Application, config config.Config) Pages {
 	var p Pages
 	pages := []string{"feeds", "notifications", "profile", "repos"}
+	if config.FeedsUrl == "" {
+		pages = pages[1:]
+	}
+
 	for _, pageName := range pages {
 		p = append(p, MakePage(app, config, pageName))
 	}
