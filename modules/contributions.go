@@ -11,7 +11,7 @@ import (
 	"github.com/bharath-srinivas/giterm/views"
 )
 
-// ContributionsCollections represents the github contributions collection.
+// ContributionsCollection represents the github contributions collection.
 type ContributionsCollection struct {
 	HasAnyContributions                                bool
 	HasActivityInThePast                               bool
