@@ -171,44 +171,39 @@ func ContributionsWidget(app *tview.Application, config config.Config) *Contribu
 		SetBorder(true)
 	c := &Contributions{
 		app:      app,
-		nodes:    map[string]ContributionsCollection{},
 		Base:     views.NewBase(app, config),
 		TreeView: widget,
 	}
 	c.SetSelectedFunc(func(node *tview.TreeNode) {
 		node.SetExpanded(!node.IsExpanded())
 	})
-	c.display()
+	c.createRootNode("[::b]Contributions in the last 90 days")
+	go c.Refresh()
 	return c
 }
 
 // Refresh refreshes the contributions widget.
 func (c *Contributions) Refresh() {
 	c.app.QueueUpdateDraw(func() {
-		c.TreeView.GetRoot().ClearChildren()
-		c.addChildren()
+		c.display()
 	})
 }
 
 // display renders the contribution activities of a user in a tree view.
 func (c *Contributions) display() {
+	c.keys = nil
+	c.nodes = map[string]ContributionsCollection{}
 	if err := c.getContributionData(); err != nil {
 		c.createRootNode(err.Error())
 		return
 	}
 
-	if c.nodes == nil {
+	if len(c.nodes) == 0 {
 		c.createRootNode("[::b]Nothing to display.")
 		return
 	}
 
-	c.createRootNode("[::b]Contributions in the last 90 days")
-	c.addChildren()
-}
-
-// addChildren appends all the child nodes to the root node of the tree view.
-func (c *Contributions) addChildren() {
-	root := c.TreeView.GetRoot()
+	root := c.TreeView.GetRoot().ClearChildren()
 	for _, key := range c.keys {
 		childNode := tview.NewTreeNode("[::b]" + key).
 			SetSelectable(true)
