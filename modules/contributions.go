@@ -1,16 +1,156 @@
 package modules
 
 import (
-	"errors"
 	"fmt"
-	"sync"
+	"time"
 
-	"github.com/google/go-github/v30/github"
 	"github.com/rivo/tview"
+	"github.com/shurcooL/githubv4"
 
 	"github.com/bharath-srinivas/giterm/config"
 	"github.com/bharath-srinivas/giterm/views"
 )
+
+// ContributionsCollections represents the github contributions collection.
+type ContributionsCollection struct {
+	HasAnyContributions                                bool
+	HasActivityInThePast                               bool
+	TotalCommitContributions                           int
+	TotalRepositoriesWithContributedCommits            int
+	TotalRepositoryContributions                       int
+	TotalPullRequestContributions                      int
+	TotalRepositoriesWithContributedPullRequests       int
+	TotalPullRequestReviewContributions                int
+	TotalRepositoriesWithContributedPullRequestReviews int
+	TotalIssueContributions                            int
+	TotalRepositoriesWithContributedIssues             int
+
+	JoinedGitHubContribution struct {
+		OccurredAt *time.Time
+	}
+
+	FirstIssueContribution struct {
+		CreatedIssueContribution struct {
+			Issue struct {
+				Title string
+				State string
+			}
+			OccurredAt *time.Time
+		} `graphql:"... on CreatedIssueContribution"`
+	}
+
+	FirstPullRequestContribution struct {
+		CreatedPullRequestContribution struct {
+			PullRequest struct {
+				Title string
+				State string
+			}
+			OccurredAt *time.Time
+		} `graphql:"... on CreatedPullRequestContribution"`
+	}
+
+	FirstRepositoryContribution struct {
+		CreatedRepositoryContribution struct {
+			Repository struct {
+				Name            string
+				PrimaryLanguage struct {
+					Name  string
+					Color string
+				}
+			}
+			OccurredAt *time.Time
+		} `graphql:"... on CreatedRepositoryContribution"`
+	}
+
+	CommitContributionsByRepository []struct {
+		Repository struct {
+			NameWithOwner string
+		}
+		Contributions struct {
+			TotalCount int
+		}
+	}
+
+	RepositoryContributions struct {
+		TotalCount int
+		Nodes      []struct {
+			OccurredAt *time.Time
+			Repository struct {
+				NameWithOwner   string
+				PrimaryLanguage struct {
+					Name  string
+					Color string
+				}
+			}
+		}
+	} `graphql:"repositoryContributions(first: 100)"`
+
+	PullRequestContributionsByRepository []struct {
+		Contributions struct {
+			TotalCount int
+			Nodes      []struct {
+				OccurredAt  *time.Time
+				PullRequest struct {
+					Title    string
+					State    string
+					Comments struct {
+						TotalCount int
+					}
+				}
+			}
+		} `graphql:"contributions(first: 100)"`
+		Repository struct {
+			NameWithOwner string
+		}
+	}
+
+	PullRequestReviewContributionsByRepository []struct {
+		Contributions struct {
+			TotalCount int
+			Nodes      []struct {
+				OccurredAt  *time.Time
+				PullRequest struct {
+					Title string
+				}
+				PullRequestReview struct {
+					State string
+				}
+			}
+		} `graphql:"contributions(first: 100)"`
+		Repository struct {
+			NameWithOwner string
+		}
+	}
+
+	IssueContributionsByRepository []struct {
+		Contributions struct {
+			Nodes []struct {
+				Issue struct {
+					Title    string
+					State    string
+					Comments struct {
+						TotalCount int
+					}
+				}
+				OccurredAt *time.Time
+			}
+			TotalCount int
+		} `graphql:"contributions (first: 100)"`
+		Repository struct {
+			NameWithOwner string
+		}
+	}
+}
+
+// contributionQuery represents a graphql query
+type contributionQuery struct {
+	Viewer struct {
+		ContributionsCollection `graphql:"contributionsCollection(from: $from, to: $to)"`
+	}
+}
+
+// contributions holds the github contributions collection of a user.
+var contributions contributionQuery
 
 // Contributions represents the github contributions of a user.
 type Contributions struct {
@@ -18,27 +158,8 @@ type Contributions struct {
 	*tview.TreeView
 
 	app   *tview.Application
-	wg    sync.WaitGroup
-	nodes map[string]contributionActivities
-}
-
-type stats struct {
-	statMap map[string]int
-	mu      sync.Mutex
-}
-
-type creations struct {
-	creationMap map[string]string
-	mu          sync.Mutex
-}
-
-// contributionActivities represents various github contribution activities.
-type contributionActivities struct {
-	commits            *stats
-	creates            *creations
-	pullRequests       *stats
-	pullRequestReviews *stats
-	issues             *stats
+	nodes map[string]ContributionsCollection
+	keys  []string
 }
 
 // ContributionsWidget returns a new instance of contribution widget.
@@ -50,8 +171,7 @@ func ContributionsWidget(app *tview.Application, config config.Config) *Contribu
 		SetBorder(true)
 	c := &Contributions{
 		app:      app,
-		wg:       sync.WaitGroup{},
-		nodes:    map[string]contributionActivities{},
+		nodes:    map[string]ContributionsCollection{},
 		Base:     views.NewBase(app, config),
 		TreeView: widget,
 	}
@@ -62,199 +182,62 @@ func ContributionsWidget(app *tview.Application, config config.Config) *Contribu
 	return c
 }
 
+// Refresh refreshes the contributions widget.
+func (c *Contributions) Refresh() {
+	c.app.QueueUpdateDraw(func() {
+		c.TreeView.GetRoot().ClearChildren()
+		c.addChildren()
+	})
+}
+
 // display renders the contribution activities of a user in a tree view.
 func (c *Contributions) display() {
-	if err := c.parseContributions(); err != nil {
+	if err := c.getContributionData(); err != nil {
 		c.createRootNode(err.Error())
 		return
 	}
 
 	if c.nodes == nil {
-		c.createRootNode("[::b]" + c.Username + " had no activity during this period.")
+		c.createRootNode("[::b]Nothing to display.")
 		return
 	}
 
 	c.createRootNode("[::b]Contributions in the last 90 days")
+	c.addChildren()
+}
+
+// addChildren appends all the child nodes to the root node of the tree view.
+func (c *Contributions) addChildren() {
 	root := c.TreeView.GetRoot()
-	for node := range c.nodes {
-		childNode := tview.NewTreeNode("[::b]" + node).
+	for _, key := range c.keys {
+		childNode := tview.NewTreeNode("[::b]" + key).
 			SetSelectable(true)
-		if commitNode := c.getCommitNode(node); commitNode != nil {
+
+		if !c.nodes[key].HasAnyContributions {
+			text := fmt.Sprintf("[::d]" + c.Username + " had no activity during this period.")
+			node := tview.NewTreeNode(text).SetSelectable(true)
+			childNode.AddChild(node)
+			root.AddChild(childNode)
+			continue
+		}
+
+		if commitNode := c.getCommitNode(key); commitNode != nil {
 			childNode.AddChild(commitNode)
 		}
-		if createNode := c.getCreateNode(node); createNode != nil {
+		if createNode := c.getRepoNode(key); createNode != nil {
 			childNode.AddChild(createNode)
 		}
-		if pullRequestNode := c.getPullRequestNode(node); pullRequestNode != nil {
+		if pullRequestNode := c.getPullRequestNode(key); pullRequestNode != nil {
 			childNode.AddChild(pullRequestNode)
 		}
-		if pullRequestReviewNode := c.getPullRequestReviewNode(node); pullRequestReviewNode != nil {
+		if pullRequestReviewNode := c.getPullRequestReviewNode(key); pullRequestReviewNode != nil {
 			childNode.AddChild(pullRequestReviewNode)
 		}
-		if issueNode := c.getIssueNode(node); issueNode != nil {
+		if issueNode := c.getIssueNode(key); issueNode != nil {
 			childNode.AddChild(issueNode)
 		}
 		root.AddChild(childNode)
 	}
-}
-
-// parseContributions parses the contribution data based on the month of contribution and populates the nodes.
-func (c *Contributions) parseContributions() error {
-	contributions, err := c.getContributionData()
-	if err != nil {
-		return errors.New("[::b]an error occurred while retrieving contribution data")
-	}
-
-	var contribActivities contributionActivities
-	for _, activity := range contributions {
-		node := activity.GetCreatedAt().Format("January 2006")
-		if _, ok := c.nodes[node]; !ok {
-			contribActivities = contributionActivities{
-				commits:            &stats{make(map[string]int, 0), sync.Mutex{}},
-				creates:            &creations{make(map[string]string, 0), sync.Mutex{}},
-				pullRequests:       &stats{make(map[string]int, 0), sync.Mutex{}},
-				pullRequestReviews: &stats{make(map[string]int, 0), sync.Mutex{}},
-				issues:             &stats{make(map[string]int, 0), sync.Mutex{}},
-			}
-		}
-		switch *activity.Type {
-		case "PushEvent":
-			c.wg.Add(1)
-			go c.parseCommits(activity, contribActivities.commits)
-		case "PullRequestEvent":
-			c.wg.Add(1)
-			go c.parsePullRequests(activity, contribActivities.pullRequests)
-		case "PullRequestReviewEvent":
-			c.wg.Add(1)
-			go c.parsePullRequestReviews(activity, contribActivities.pullRequestReviews)
-		case "IssuesEvent":
-			c.wg.Add(1)
-			go c.parseIssues(activity, contribActivities.issues)
-		case "CreateEvent":
-			c.wg.Add(1)
-			go c.parseCreates(activity, contribActivities.creates)
-		case "ForkEvent":
-			c.wg.Add(1)
-			go c.parseForks(activity, contribActivities.creates)
-		}
-		c.nodes[node] = contribActivities
-	}
-	c.wg.Wait()
-	return nil
-}
-
-// parseCommits parses the commits data from the provided event and updates the provided commit map with parsed information.
-func (c *Contributions) parseCommits(event *github.Event, stats *stats) {
-	defer c.wg.Done()
-	repoId := event.GetRepo().GetID()
-	repo, _ := c.getRepoById(repoId)
-	payload, _ := event.ParsePayload()
-	ref := "refs/heads/" + repo.GetDefaultBranch()
-	if !repo.GetFork() && payload.(*github.PushEvent).GetRef() == ref {
-		commitCount := payload.(*github.PushEvent).GetSize()
-		repoName := event.GetRepo().GetName()
-		stats.mu.Lock()
-		stats.statMap[repoName] += commitCount
-		stats.mu.Unlock()
-	}
-}
-
-// parsePullRequests parses the pull requests data from the provided event and updates the provided  pull request map
-//with parsed information.
-func (c *Contributions) parsePullRequests(event *github.Event, stats *stats) {
-	defer c.wg.Done()
-	repoId := event.GetRepo().GetID()
-	repo, _ := c.getRepoById(repoId)
-	if !repo.GetFork() {
-		payload, _ := event.ParsePayload()
-		if payload.(*github.PullRequestEvent).GetAction() == "opened" {
-			repoName := event.GetRepo().GetName()
-			stats.mu.Lock()
-			stats.statMap[repoName] += 1
-			stats.mu.Unlock()
-		}
-	}
-}
-
-// parsePullRequestReviews parses the pull request reviews data from the provided event and updates the provided
-//pull request review map with parsed information.
-func (c *Contributions) parsePullRequestReviews(event *github.Event, stats *stats) {
-	defer c.wg.Done()
-	repoId := event.GetRepo().GetID()
-	repo, _ := c.getRepoById(repoId)
-	if !repo.GetFork() {
-		repoName := event.GetRepo().GetName()
-		stats.mu.Lock()
-		stats.statMap[repoName] += 1
-		stats.mu.Unlock()
-	}
-}
-
-// parseIssues parses the issues data from the provided event and updates the provided issues map with parsed information.
-func (c *Contributions) parseIssues(event *github.Event, stats *stats) {
-	defer c.wg.Done()
-	repoId := event.GetRepo().GetID()
-	repo, _ := c.getRepoById(repoId)
-	payload, _ := event.ParsePayload()
-	action := payload.(*github.IssuesEvent).GetAction()
-	if !repo.GetFork() && action == "opened" {
-		repoName := event.GetRepo().GetName()
-		stats.mu.Lock()
-		stats.statMap[repoName] += 1
-		stats.mu.Unlock()
-	}
-}
-
-// parseCreates parses the created repositories data from the provided event and updates both the provided create map
-//and commit map with parsed information.
-func (c *Contributions) parseCreates(event *github.Event, creations *creations) {
-	defer c.wg.Done()
-	payload, _ := event.ParsePayload()
-	if payload.(*github.CreateEvent).GetRefType() == "repository" {
-		repoName := event.GetRepo().GetName()
-		createdAt := event.GetCreatedAt().Format("Jan 02")
-		creations.mu.Lock()
-		creations.creationMap[repoName] = createdAt
-		creations.mu.Unlock()
-	}
-}
-
-// parseForks parses the forks data from the provided event and updates the provided fork map with parsed information.
-func (c *Contributions) parseForks(event *github.Event, creations *creations) {
-	defer c.wg.Done()
-	payload, _ := event.ParsePayload()
-	repoName := payload.(*github.ForkEvent).GetForkee().GetFullName()
-	createdAt := event.GetCreatedAt().Format("Jan 02")
-	creations.mu.Lock()
-	creations.creationMap[repoName] = createdAt
-	creations.mu.Unlock()
-}
-
-// getContributionData retrieves the contribution data of a user for the past 90 days. Refer to
-//https://developer.github.com/v3/activity/events/#events for more information.
-func (c *Contributions) getContributionData() ([]*github.Event, error) {
-	var eventList []*github.Event
-	response := &github.Response{}
-	response.NextPage = 1
-	for response.NextPage > 0 {
-		options := &github.ListOptions{
-			Page:    response.NextPage,
-			PerPage: 100,
-		}
-		events, res, err := c.Client.Activity.ListEventsPerformedByUser(c.Context, c.Username, false, options)
-		if err != nil {
-			return nil, err
-		}
-		response = res
-		eventList = append(eventList, events...)
-	}
-	return eventList, nil
-}
-
-// getRepoById returns the github repository based on the provided ID.
-func (c *Contributions) getRepoById(id int64) (*github.Repository, error) {
-	repo, _, err := c.Client.Repositories.GetByID(c.Context, id)
-	return repo, err
 }
 
 // createRootNode creates the root tree node for the tree view with the provided text.
@@ -267,44 +250,42 @@ func (c *Contributions) createRootNode(text string) {
 
 // getCommitNode returns the tree node with commits data for a given key, which is the month.
 func (c *Contributions) getCommitNode(key string) *tview.TreeNode {
-	totalRepoCount := len(c.nodes[key].commits.statMap)
-	if totalRepoCount < 1 {
+	totalCommits := c.nodes[key].TotalCommitContributions
+	if totalCommits == 0 {
 		return nil
 	}
 
-	createdRepos := c.nodes[key].creates.creationMap
-	var totalCommits int
+	totalRepos := c.nodes[key].TotalRepositoriesWithContributedCommits
+	nodes := c.nodes[key].CommitContributionsByRepository
 	var childNodes []*tview.TreeNode
-	for repo, commitCount := range c.nodes[key].commits.statMap {
-		// special condition to keep track of initial commit in a repository
-		if _, ok := createdRepos[repo]; ok {
-			commitCount += 1
-		}
+	for _, node := range nodes {
+		repo := node.Repository.NameWithOwner
+		commitCount := node.Contributions.TotalCount
 		commitText := pluralize("commit", commitCount)
 		text := fmt.Sprintf(" [white]%s  [gray::d]%d %s", repo, commitCount, commitText)
 		child := tview.NewTreeNode(text).SetSelectable(false)
 		childNodes = append(childNodes, child)
-		totalCommits += commitCount
 	}
 
 	commitText := pluralize("commit", totalCommits)
-	repoText := pluralize("repository", totalRepoCount)
-	text := fmt.Sprintf(" [::b]Created %d %s in %d %s", totalCommits, commitText, totalRepoCount, repoText)
+	repoText := pluralize("repository", totalRepos)
+	text := fmt.Sprintf(" [::b]Created %d %s in %d %s", totalCommits, commitText, totalRepos, repoText)
 	node := tview.NewTreeNode(text).SetSelectable(true)
 	node.SetChildren(childNodes)
 	return node
 }
 
-// getCreateNode returns the tree node with created repositories data for a given key, which is the month.
-func (c *Contributions) getCreateNode(key string) *tview.TreeNode {
-	totalRepoCount := len(c.nodes[key].creates.creationMap)
-	if totalRepoCount < 1 {
+// getRepoNode returns the tree node with created repositories data for a given key, which is the month.
+func (c *Contributions) getRepoNode(key string) *tview.TreeNode {
+	totalRepoCount := c.nodes[key].TotalRepositoryContributions
+	if totalRepoCount == 0 {
 		return nil
 	}
 
 	var childNodes []*tview.TreeNode
-	for repo, createdAt := range c.nodes[key].creates.creationMap {
-		text := fmt.Sprintf(" [white]%s  [gray::d]%s", repo, createdAt)
+	for _, node := range c.nodes[key].RepositoryContributions.Nodes {
+		createdAt := node.OccurredAt.Format("Jan 02")
+		text := fmt.Sprintf(" [white]%s  [gray::d]%s", node.Repository.NameWithOwner, createdAt)
 		child := tview.NewTreeNode(text).SetSelectable(false)
 		childNodes = append(childNodes, child)
 	}
@@ -318,24 +299,25 @@ func (c *Contributions) getCreateNode(key string) *tview.TreeNode {
 
 // getPullRequestNode returns the tree node with pull requests data for a given key, which is the month.
 func (c *Contributions) getPullRequestNode(key string) *tview.TreeNode {
-	totalRepoCount := len(c.nodes[key].pullRequests.statMap)
-	if totalRepoCount < 1 {
+	totalPullRequests := c.nodes[key].TotalPullRequestContributions
+	if totalPullRequests == 0 {
 		return nil
 	}
 
-	var totalPrCount int
+	totalRepoCount := c.nodes[key].TotalRepositoriesWithContributedPullRequests
 	var childNodes []*tview.TreeNode
-	for repo, prCount := range c.nodes[key].pullRequests.statMap {
+	for _, node := range c.nodes[key].PullRequestContributionsByRepository {
+		repo := node.Repository.NameWithOwner
+		prCount := node.Contributions.TotalCount
 		prText := pluralize("pull request", prCount)
 		text := fmt.Sprintf(" [white]%s  [gray::d]%d %s", repo, prCount, prText)
 		child := tview.NewTreeNode(text).SetSelectable(false)
 		childNodes = append(childNodes, child)
-		totalPrCount += prCount
 	}
 
-	prText := pluralize("pull request", totalPrCount)
+	prText := pluralize("pull request", totalPullRequests)
 	repoText := pluralize("repository", totalRepoCount)
-	text := fmt.Sprintf(" [::b]Opened %d %s in %d %s", totalPrCount, prText, totalRepoCount, repoText)
+	text := fmt.Sprintf(" [::b]Opened %d %s in %d %s", totalPullRequests, prText, totalRepoCount, repoText)
 	node := tview.NewTreeNode(text).SetSelectable(true)
 	node.SetChildren(childNodes)
 	return node
@@ -343,24 +325,25 @@ func (c *Contributions) getPullRequestNode(key string) *tview.TreeNode {
 
 // getPullRequestReviewNode returns the tree node with pull request reviews data for a given key, which is the month.
 func (c *Contributions) getPullRequestReviewNode(key string) *tview.TreeNode {
-	totalRepoCount := len(c.nodes[key].pullRequestReviews.statMap)
-	if totalRepoCount < 1 {
+	totalPullRequestReviews := c.nodes[key].TotalPullRequestReviewContributions
+	if totalPullRequestReviews == 0 {
 		return nil
 	}
 
-	var totalReviewCount int
+	totalRepoCount := c.nodes[key].TotalRepositoriesWithContributedPullRequestReviews
 	var childNodes []*tview.TreeNode
-	for repo, reviewCount := range c.nodes[key].pullRequestReviews.statMap {
+	for _, node := range c.nodes[key].PullRequestReviewContributionsByRepository {
+		reviewCount := node.Contributions.TotalCount
+		repo := node.Repository.NameWithOwner
 		reviewText := pluralize("pull request", reviewCount)
 		text := fmt.Sprintf(" [white]%s  [gray::d]%d %s", repo, reviewCount, reviewText)
 		child := tview.NewTreeNode(text).SetSelectable(false)
 		childNodes = append(childNodes, child)
-		totalReviewCount += reviewCount
 	}
 
-	reviewText := pluralize("pull request", totalReviewCount)
+	reviewText := pluralize("pull request", totalPullRequestReviews)
 	repoText := pluralize("repository", totalRepoCount)
-	text := fmt.Sprintf(" [::b]Reviewed %d %s in %d %s", totalReviewCount, reviewText, totalRepoCount, repoText)
+	text := fmt.Sprintf(" [::b]Reviewed %d %s in %d %s", totalPullRequestReviews, reviewText, totalRepoCount, repoText)
 	node := tview.NewTreeNode(text).SetSelectable(true)
 	node.SetChildren(childNodes)
 	return node
@@ -368,27 +351,63 @@ func (c *Contributions) getPullRequestReviewNode(key string) *tview.TreeNode {
 
 // getIssueNode returns the tree node with issues data for a given key, which is the month.
 func (c *Contributions) getIssueNode(key string) *tview.TreeNode {
-	totalRepoCount := len(c.nodes[key].issues.statMap)
-	if totalRepoCount < 1 {
+	totalIssues := c.nodes[key].TotalIssueContributions
+	if totalIssues == 0 {
 		return nil
 	}
 
-	var totalIssueCount int
+	totalRepoCount := c.nodes[key].TotalRepositoriesWithContributedIssues
 	var childNodes []*tview.TreeNode
-	for repo, issueCount := range c.nodes[key].issues.statMap {
+	for _, node := range c.nodes[key].IssueContributionsByRepository {
+		repo := node.Repository.NameWithOwner
+		issueCount := node.Contributions.TotalCount
 		issueText := pluralize("issue", issueCount)
 		text := fmt.Sprintf(" [white]%s  [gray::d]%d %s", repo, issueCount, issueText)
 		child := tview.NewTreeNode(text).SetSelectable(false)
 		childNodes = append(childNodes, child)
-		totalIssueCount += issueCount
 	}
 
-	issueText := pluralize("issue", totalIssueCount)
+	issueText := pluralize("issue", totalIssues)
 	repoText := pluralize("repository", totalRepoCount)
-	text := fmt.Sprintf(" [::b]Opened %d %s in %d %s", totalIssueCount, issueText, totalRepoCount, repoText)
+	text := fmt.Sprintf(" [::b]Opened %d %s in %d %s", totalIssues, issueText, totalRepoCount, repoText)
 	node := tview.NewTreeNode(text).SetSelectable(true)
 	node.SetChildren(childNodes)
 	return node
+}
+
+// getContributionData retrieves the contribution data of a user for the past 3 months.
+func (c *Contributions) getContributionData() error {
+	for i := time.Month(0); i > -3; i-- {
+		firstOfMonth, lastOfMonth := getPeriod(i)
+		variables := map[string]interface{}{
+			"from": githubv4.DateTime{Time: firstOfMonth},
+			"to":   githubv4.DateTime{Time: lastOfMonth},
+		}
+
+		if err := c.GqlClient.Query(c.Context, &contributions, variables); err != nil {
+			return err
+		}
+
+		key := firstOfMonth.Format("January 2006")
+		c.nodes[key] = contributions.Viewer.ContributionsCollection
+		c.keys = append(c.keys, key)
+
+		if !contributions.Viewer.HasActivityInThePast {
+			break
+		}
+	}
+	return nil
+}
+
+// getPeriod returns the first date and last date of a month based on the provided offset value. The offset can be a negative
+//value to get the first and last date of previous month.
+func getPeriod(offset time.Month) (time.Time, time.Time) {
+	now := time.Now()
+	currentYear, currentMonth, _ := now.Date()
+	currentLocation := now.Location()
+	firstOfMonth := time.Date(currentYear, currentMonth+offset, 1, 0, 0, 0, 0, currentLocation)
+	lastOfMonth := firstOfMonth.AddDate(0, 1, -1).Add(86399 * time.Second)
+	return firstOfMonth, lastOfMonth
 }
 
 // pluralize is a helper function which will return pluralized text if the count is greater than 1. Otherwise returns
