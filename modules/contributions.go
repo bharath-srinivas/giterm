@@ -84,7 +84,7 @@ type ContributionsCollection struct {
 				}
 			}
 		}
-	} `graphql:"repositoryContributions(first: 100)"`
+	} `graphql:"repositoryContributions(first: 25)"`
 
 	PullRequestContributionsByRepository []struct {
 		Contributions struct {
@@ -99,7 +99,7 @@ type ContributionsCollection struct {
 					}
 				}
 			}
-		} `graphql:"contributions(first: 100)"`
+		} `graphql:"contributions(first: 25)"`
 		Repository struct {
 			NameWithOwner string
 		}
@@ -117,7 +117,7 @@ type ContributionsCollection struct {
 					State string
 				}
 			}
-		} `graphql:"contributions(first: 100)"`
+		} `graphql:"contributions(first: 25)"`
 		Repository struct {
 			NameWithOwner string
 		}
@@ -136,7 +136,7 @@ type ContributionsCollection struct {
 				OccurredAt *time.Time
 			}
 			TotalCount int
-		} `graphql:"contributions (first: 100)"`
+		} `graphql:"contributions (first: 25)"`
 		Repository struct {
 			NameWithOwner string
 		}
@@ -263,6 +263,14 @@ func (c *Contributions) getCommitNode(key string) *tview.TreeNode {
 		childNodes = append(childNodes, child)
 	}
 
+	repoCount := len(nodes)
+	if totalRepos > repoCount {
+		repoText := pluralize("repository", repoCount)
+		text := fmt.Sprintf("[gray::d]%d %s not shown", totalRepos-repoCount, repoText)
+		child := tview.NewTreeNode(text).SetSelectable(false)
+		childNodes = append(childNodes, child)
+	}
+
 	commitText := pluralize("commit", totalCommits)
 	repoText := pluralize("repository", totalRepos)
 	text := fmt.Sprintf(" [::b]Created %d %s in %d %s", totalCommits, commitText, totalRepos, repoText)
@@ -278,12 +286,13 @@ func (c *Contributions) getRepoNode(key string) *tview.TreeNode {
 		return nil
 	}
 
+	nodes := c.nodes[key].RepositoryContributions.Nodes
 	var childNodes []*tview.TreeNode
 	var emptyLang struct {
 		Name  string
 		Color string
 	}
-	for _, node := range c.nodes[key].RepositoryContributions.Nodes {
+	for _, node := range nodes {
 		repo := node.Repository.NameWithOwner
 
 		var lang string
@@ -292,6 +301,14 @@ func (c *Contributions) getRepoNode(key string) *tview.TreeNode {
 		}
 		createdAt := node.OccurredAt.Format("Jan 02")
 		text := fmt.Sprintf(" [white]%s \t%s  [gray::d]%s", repo, lang, createdAt)
+		child := tview.NewTreeNode(text).SetSelectable(false)
+		childNodes = append(childNodes, child)
+	}
+
+	repoCount := len(nodes)
+	if totalRepoCount > repoCount {
+		repoText := pluralize("repository", repoCount)
+		text := fmt.Sprintf("[gray::d]%d %s not shown", totalRepoCount-repoCount, repoText)
 		child := tview.NewTreeNode(text).SetSelectable(false)
 		childNodes = append(childNodes, child)
 	}
@@ -311,8 +328,10 @@ func (c *Contributions) getPullRequestNode(key string) *tview.TreeNode {
 	}
 
 	totalRepoCount := c.nodes[key].TotalRepositoriesWithContributedPullRequests
+	nodes := c.nodes[key].PullRequestContributionsByRepository
 	var childNodes []*tview.TreeNode
-	for _, node := range c.nodes[key].PullRequestContributionsByRepository {
+	for _, node := range nodes {
+		pullRequestCount := node.Contributions.TotalCount
 		repo := node.Repository.NameWithOwner
 		text := " [white::]" + repo
 		child := tview.NewTreeNode(text).
@@ -350,7 +369,21 @@ func (c *Contributions) getPullRequestNode(key string) *tview.TreeNode {
 		if closedCount > 0 {
 			text += fmt.Sprintf("  [white:indianred:] %d [:black:] [gray::d]%s", closedCount, "closed")
 		}
+
+		if pullRequestCount > 25 {
+			subChild := tview.NewTreeNode("[gray::d]Some pull requests not shown.").
+				SetSelectable(false)
+			child.AddChild(subChild)
+		}
 		child.SetText(text)
+		childNodes = append(childNodes, child)
+	}
+
+	repoCount := len(nodes)
+	if totalRepoCount > repoCount {
+		repoText := pluralize("repository", repoCount)
+		text := fmt.Sprintf("[gray::d]%d %s not shown", totalRepoCount-repoCount, repoText)
+		child := tview.NewTreeNode(text).SetSelectable(false)
 		childNodes = append(childNodes, child)
 	}
 
@@ -370,8 +403,9 @@ func (c *Contributions) getPullRequestReviewNode(key string) *tview.TreeNode {
 	}
 
 	totalRepoCount := c.nodes[key].TotalRepositoriesWithContributedPullRequestReviews
+	nodes := c.nodes[key].PullRequestReviewContributionsByRepository
 	var childNodes []*tview.TreeNode
-	for _, node := range c.nodes[key].PullRequestReviewContributionsByRepository {
+	for _, node := range nodes {
 		reviewCount := node.Contributions.TotalCount
 		repo := node.Repository.NameWithOwner
 		reviewText := pluralize("pull request", reviewCount)
@@ -409,6 +443,19 @@ func (c *Contributions) getPullRequestReviewNode(key string) *tview.TreeNode {
 			child.AddChild(subChild)
 		}
 
+		if reviewCount > 25 {
+			subChild := tview.NewTreeNode("[gray::d]Some pull request reviews not shown.").
+				SetSelectable(false)
+			child.AddChild(subChild)
+		}
+		childNodes = append(childNodes, child)
+	}
+
+	repoCount := len(nodes)
+	if totalRepoCount > repoCount {
+		repoText := pluralize("repository", repoCount)
+		text := fmt.Sprintf("[gray::d]%d %s not shown", totalRepoCount-repoCount, repoText)
+		child := tview.NewTreeNode(text).SetSelectable(false)
 		childNodes = append(childNodes, child)
 	}
 
@@ -428,8 +475,10 @@ func (c *Contributions) getIssueNode(key string) *tview.TreeNode {
 	}
 
 	totalRepoCount := c.nodes[key].TotalRepositoriesWithContributedIssues
+	nodes := c.nodes[key].IssueContributionsByRepository
 	var childNodes []*tview.TreeNode
-	for _, node := range c.nodes[key].IssueContributionsByRepository {
+	for _, node := range nodes {
+		issueCount := node.Contributions.TotalCount
 		text := " [white]" + node.Repository.NameWithOwner
 		child := tview.NewTreeNode(text).
 			SetSelectable(true).
@@ -461,7 +510,21 @@ func (c *Contributions) getIssueNode(key string) *tview.TreeNode {
 		if closedCount > 0 {
 			text += fmt.Sprintf("  [white:indianred:] %d [:black:] [gray::d]%s", closedCount, "closed")
 		}
+
+		if issueCount > 25 {
+			subChild := tview.NewTreeNode("[gray::d]Some issues not shown.").
+				SetSelectable(false)
+			child.AddChild(subChild)
+		}
 		child.SetText(text)
+		childNodes = append(childNodes, child)
+	}
+
+	repoCount := len(nodes)
+	if totalRepoCount > repoCount {
+		repoText := pluralize("repository", repoCount)
+		text := fmt.Sprintf("[gray::d]%d %s not shown", totalRepoCount-repoCount, repoText)
+		child := tview.NewTreeNode(text).SetSelectable(false)
 		childNodes = append(childNodes, child)
 	}
 
