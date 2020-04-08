@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gdamore/tcell"
 	"github.com/rivo/tview"
 	"github.com/shurcooL/githubv4"
 
@@ -165,8 +166,7 @@ type Contributions struct {
 // ContributionsWidget returns a new instance of contribution widget.
 func ContributionsWidget(app *tview.Application, config config.Config) *Contributions {
 	widget := tview.NewTreeView().
-		SetTopLevel(1).
-		SetAlign(true)
+		SetTopLevel(1)
 	widget.SetTitle(string('\U0001F4C8') + " [green::b]Contribution activity").
 		SetBorder(true)
 	c := &Contributions{
@@ -209,8 +209,8 @@ func (c *Contributions) display() {
 			SetSelectable(true)
 
 		if !c.nodes[key].HasAnyContributions {
-			text := fmt.Sprintf("[::d]" + c.Username + " had no activity during this period.")
-			node := tview.NewTreeNode(text).SetSelectable(true)
+			text := fmt.Sprintf(" [::d]" + c.Username + " had no activity during this period.")
+			node := tview.NewTreeNode(text).SetSelectable(false)
 			childNode.AddChild(node)
 			root.AddChild(childNode)
 			continue
@@ -240,7 +240,8 @@ func (c *Contributions) createRootNode(text string) {
 	root := tview.NewTreeNode(text)
 	c.TreeView.
 		SetRoot(root).
-		SetCurrentNode(root)
+		SetCurrentNode(root).
+		SetGraphics(false)
 }
 
 // getCommitNode returns the tree node with commits data for a given key, which is the month.
@@ -278,9 +279,19 @@ func (c *Contributions) getRepoNode(key string) *tview.TreeNode {
 	}
 
 	var childNodes []*tview.TreeNode
+	var emptyLang struct {
+		Name  string
+		Color string
+	}
 	for _, node := range c.nodes[key].RepositoryContributions.Nodes {
+		repo := node.Repository.NameWithOwner
+
+		var lang string
+		if node.Repository.PrimaryLanguage != (emptyLang) {
+			lang = fmt.Sprintf("[%s]● %s", node.Repository.PrimaryLanguage.Color, node.Repository.PrimaryLanguage.Name)
+		}
 		createdAt := node.OccurredAt.Format("Jan 02")
-		text := fmt.Sprintf(" [white]%s  [gray::d]%s", node.Repository.NameWithOwner, createdAt)
+		text := fmt.Sprintf(" [white]%s \t%s  [gray::d]%s", repo, lang, createdAt)
 		child := tview.NewTreeNode(text).SetSelectable(false)
 		childNodes = append(childNodes, child)
 	}
@@ -303,10 +314,43 @@ func (c *Contributions) getPullRequestNode(key string) *tview.TreeNode {
 	var childNodes []*tview.TreeNode
 	for _, node := range c.nodes[key].PullRequestContributionsByRepository {
 		repo := node.Repository.NameWithOwner
-		prCount := node.Contributions.TotalCount
-		prText := pluralize("pull request", prCount)
-		text := fmt.Sprintf(" [white]%s  [gray::d]%d %s", repo, prCount, prText)
-		child := tview.NewTreeNode(text).SetSelectable(false)
+		text := " [white::]" + repo
+		child := tview.NewTreeNode(text).
+			SetSelectable(true).
+			SetExpanded(false).
+			SetColor(tcell.ColorGray)
+		var openCount, mergedCount, closedCount int
+		for _, node := range node.Contributions.Nodes {
+			title := tview.Escape(node.PullRequest.Title)
+			createdAt := node.OccurredAt.Format("Jan 02")
+
+			var subText string
+			switch node.PullRequest.State {
+			case "OPEN":
+				openCount += 1
+				subText = fmt.Sprintf(" [green::d]%s  [gray::d]%s", title, createdAt)
+			case "MERGED":
+				mergedCount += 1
+				subText = fmt.Sprintf(" [rebeccapurple::d]%s  [gray::d]%s", title, createdAt)
+			case "CLOSED":
+				closedCount += 1
+				subText = fmt.Sprintf(" [indianred::d]%s  [gray::d]%s", title, createdAt)
+			}
+
+			subChild := tview.NewTreeNode(subText).SetSelectable(false)
+			child.AddChild(subChild)
+		}
+
+		if openCount > 0 {
+			text += fmt.Sprintf("  [white:green:] %d [:black:] [gray::d]%s", openCount, "open")
+		}
+		if mergedCount > 0 {
+			text += fmt.Sprintf("  [white:rebeccapurple:] %d [:black:] [gray::d]%s", mergedCount, "merged")
+		}
+		if closedCount > 0 {
+			text += fmt.Sprintf("  [white:indianred:] %d [:black:] [gray::d]%s", closedCount, "closed")
+		}
+		child.SetText(text)
 		childNodes = append(childNodes, child)
 	}
 
@@ -332,7 +376,39 @@ func (c *Contributions) getPullRequestReviewNode(key string) *tview.TreeNode {
 		repo := node.Repository.NameWithOwner
 		reviewText := pluralize("pull request", reviewCount)
 		text := fmt.Sprintf(" [white]%s  [gray::d]%d %s", repo, reviewCount, reviewText)
-		child := tview.NewTreeNode(text).SetSelectable(false)
+		child := tview.NewTreeNode(text).
+			SetSelectable(true).
+			SetExpanded(false).
+			SetColor(tcell.ColorGray)
+
+		var pending, commented, approved, changeRequested, dismissed int
+		for _, node := range node.Contributions.Nodes {
+			title := tview.Escape(node.PullRequest.Title)
+			createdAt := node.OccurredAt.Format("Jan 02")
+
+			var subText string
+			switch node.PullRequestReview.State {
+			case "PENDING":
+				pending += 1
+				subText = fmt.Sprintf(" [gray::d]%s  [gray::d]%s", title, createdAt)
+			case "COMMENTED":
+				commented += 1
+				subText = fmt.Sprintf(" [darkmagenta::d]%s  [gray::d]%s", title, createdAt)
+			case "APPROVED":
+				approved += 1
+				subText = fmt.Sprintf(" [green::d]%s  [gray::d]%s", title, createdAt)
+			case "CHANGES_REQUESTED":
+				changeRequested += 1
+				subText = fmt.Sprintf(" [yellow::d]%s  [gray::d]%s", title, createdAt)
+			case "DISMISSED":
+				dismissed += 1
+				subText = fmt.Sprintf(" [indianred::d]%s  [gray::d]%s", title, createdAt)
+			}
+
+			subChild := tview.NewTreeNode(subText).SetSelectable(false)
+			child.AddChild(subChild)
+		}
+
 		childNodes = append(childNodes, child)
 	}
 
@@ -354,11 +430,38 @@ func (c *Contributions) getIssueNode(key string) *tview.TreeNode {
 	totalRepoCount := c.nodes[key].TotalRepositoriesWithContributedIssues
 	var childNodes []*tview.TreeNode
 	for _, node := range c.nodes[key].IssueContributionsByRepository {
-		repo := node.Repository.NameWithOwner
-		issueCount := node.Contributions.TotalCount
-		issueText := pluralize("issue", issueCount)
-		text := fmt.Sprintf(" [white]%s  [gray::d]%d %s", repo, issueCount, issueText)
-		child := tview.NewTreeNode(text).SetSelectable(false)
+		text := " [white]" + node.Repository.NameWithOwner
+		child := tview.NewTreeNode(text).
+			SetSelectable(true).
+			SetExpanded(false).
+			SetColor(tcell.ColorGray)
+
+		var openCount, closedCount int
+		for _, node := range node.Contributions.Nodes {
+			title := tview.Escape(node.Issue.Title)
+			createdAt := node.OccurredAt.Format("Jan 02")
+
+			var subText string
+			switch node.Issue.State {
+			case "OPEN":
+				openCount += 1
+				subText = fmt.Sprintf(" [green::d]%s  [gray::d]%s", title, createdAt)
+			case "CLOSED":
+				closedCount += 1
+				subText = fmt.Sprintf(" [indianred::d]%s  [gray::d]%s", title, createdAt)
+			}
+
+			subChild := tview.NewTreeNode(subText).SetSelectable(false)
+			child.AddChild(subChild)
+		}
+
+		if openCount > 0 {
+			text += fmt.Sprintf("  [white:green:] %d [:black:] [gray::d]%s", openCount, "open")
+		}
+		if closedCount > 0 {
+			text += fmt.Sprintf("  [white:indianred:] %d [:black:] [gray::d]%s", closedCount, "closed")
+		}
+		child.SetText(text)
 		childNodes = append(childNodes, child)
 	}
 
@@ -373,7 +476,7 @@ func (c *Contributions) getIssueNode(key string) *tview.TreeNode {
 // getContributionData retrieves the contribution data of a user for the past 3 months.
 func (c *Contributions) getContributionData() error {
 	for i := time.Month(0); i > -3; i-- {
-		firstOfMonth, lastOfMonth := getPeriod(i)
+		firstOfMonth, lastOfMonth := getTimePeriod(i)
 		variables := map[string]interface{}{
 			"from": githubv4.DateTime{Time: firstOfMonth},
 			"to":   githubv4.DateTime{Time: lastOfMonth},
@@ -394,9 +497,9 @@ func (c *Contributions) getContributionData() error {
 	return nil
 }
 
-// getPeriod returns the first date and last date of a month based on the provided offset value. The offset can be a negative
+// getTimePeriod returns the first date and last date of a month based on the provided offset value. The offset can be a negative
 //value to get the first and last date of previous month.
-func getPeriod(offset time.Month) (time.Time, time.Time) {
+func getTimePeriod(offset time.Month) (time.Time, time.Time) {
 	now := time.Now()
 	currentYear, currentMonth, _ := now.Date()
 	currentLocation := now.Location()
