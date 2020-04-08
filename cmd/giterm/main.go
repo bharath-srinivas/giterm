@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"runtime"
 
 	"github.com/rivo/tview"
 	"github.com/spf13/pflag"
@@ -59,6 +60,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	runtime.GOMAXPROCS(runtime.NumCPU())
 	gitApp := app.New(tview.NewApplication(), cfg)
 	if err := gitApp.Run(); err != nil {
 		log.Println(err)
