@@ -174,6 +174,11 @@ func (r *Repos) display() {
 		return
 	}
 
+	if repositories.Viewer.Repositories.TotalCount == 0 {
+		_, _ = fmt.Fprintln(r.TextView, "[::b]Nothing to display")
+		return
+	}
+
 	_, _, width, _ := r.GetInnerRect()
 	writer := tabwriter.NewWriter(r.TextView, 0, 4, 2, '\t', 0)
 	for _, repo := range repositories.Viewer.Repositories.Nodes {
