@@ -219,10 +219,10 @@ func getRepoInfo(repo repository) string {
 		description = "[white::d]" + *repo.Description + "\n\n"
 	}
 	if repo.PrimaryLanguage != nil {
-		lang = fmt.Sprintf("[%s]● %s\t", repo.PrimaryLanguage.Color, repo.PrimaryLanguage.Name)
+		lang = fmt.Sprintf("[%s]%s %s\t", repo.PrimaryLanguage.Color, string('\u25CF'), repo.PrimaryLanguage.Name)
 	}
 	if repo.Stargazers.TotalCount > 0 {
-		stars = fmt.Sprintf("[white]%s %d\t", string('\u2B50'), repo.Stargazers.TotalCount)
+		stars = fmt.Sprintf("[white]%s %d\t", string('\u2605'), repo.Stargazers.TotalCount)
 	}
 	if repo.ForkCount > 0 {
 		forks = fmt.Sprintf("[white]%s %d\t", string('\u2442'), repo.ForkCount)
