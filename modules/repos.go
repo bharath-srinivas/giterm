@@ -3,125 +3,231 @@ package modules
 import (
 	"fmt"
 	"strings"
+	"text/tabwriter"
+	"time"
 
-	"github.com/google/go-github/v30/github"
 	"github.com/rivo/tview"
+	"github.com/shurcooL/githubv4"
 
 	"github.com/bharath-srinivas/giterm/config"
 	"github.com/bharath-srinivas/giterm/views"
 )
 
-// Repos represents the github repositories.
+// repoQuery represents a graphql query.
+type repoQuery struct {
+	Viewer struct {
+		Repositories struct {
+			TotalCount int
+			Nodes      []repository
+			PageInfo   struct {
+				StartCursor     string
+				EndCursor       string
+				HasPreviousPage bool
+				HasNextPage     bool
+			}
+		} `graphql:"repositories (first: $first, before: $before, after:$after, privacy: $privacy, isFork: $isFork, orderBy: $orderBy)"`
+	}
+}
+
+// repository represents a github repository.
+type repository struct {
+	Name             string
+	Description      *string
+	IsArchived       bool
+	IsPrivate        bool
+	RepositoryTopics struct {
+		Nodes []struct {
+			Topic struct {
+				Name string
+			}
+		}
+	} `graphql:"repositoryTopics (first: 25)"`
+	PrimaryLanguage *struct {
+		Name  string
+		Color string
+	}
+	Stargazers struct {
+		TotalCount int
+	}
+	IsMirror bool
+	IsFork   bool
+	Parent   struct {
+		NameWithOwner string
+	}
+	ForkCount   int
+	LicenseInfo *struct {
+		Name string
+	}
+	PushedAt *time.Time
+}
+
+// repositories holds the github repositories info.
+var repositories repoQuery
+
+// Repos represents the github repositories of the authenticated user.
 type Repos struct {
-	app *tview.Application
-	*views.Base
-	*tview.Table
-	*github.RepositoryListOptions
-	*github.Response
+	*views.TextWidget
+
+	first   githubv4.Int
+	privacy *githubv4.RepositoryPrivacy
+	isFork  *githubv4.Boolean
+	before  *githubv4.String
+	after   *githubv4.String
 }
 
 // RepoWidget returns a new instance of repo widget.
-// TODO: convert this widget as text widget
 func RepoWidget(app *tview.Application, config config.Config) *Repos {
-	widget := tview.NewTable().
-		SetBorders(true)
-	widget.SetBorder(true)
-	r := &Repos{
-		app:                   app,
-		Base:                  views.NewBase(app, config),
-		Table:                 widget,
-		RepositoryListOptions: &github.RepositoryListOptions{},
-		Response:              &github.Response{},
-	}
+	widget := views.NewTextView(app, config, true)
+	r := &Repos{TextWidget: widget}
 	return r
 }
 
 // Refresh refreshes the repository list.
 func (r *Repos) Refresh() {
-	r.app.QueueUpdateDraw(func() {
-		r.Clear()
-		r.display(r.RepositoryListOptions)
-		r.ScrollToBeginning()
-	})
+	r.Redraw(r.display)
 }
 
 // Filter filters the repository list according to the given repository type.
 func (r *Repos) Filter(repoType string) {
-	r.RepositoryListOptions.Type = strings.ToLower(repoType)
+	r.before = nil
+	r.after = nil
+	switch strings.ToLower(repoType) {
+	case "public":
+		r.isFork = nil
+		privacy := githubv4.RepositoryPrivacyPublic
+		r.privacy = &privacy
+	case "private":
+		r.isFork = nil
+		privacy := githubv4.RepositoryPrivacyPrivate
+		r.privacy = &privacy
+	case "sources":
+		r.privacy = nil
+		isFork := githubv4.Boolean(false)
+		r.isFork = &isFork
+	case "forks":
+		r.privacy = nil
+		isFork := githubv4.Boolean(true)
+		r.isFork = &isFork
+	default:
+		r.privacy = nil
+		r.isFork = nil
+	}
 	go r.Refresh()
 }
 
 // SetPageSize sets the page size.
 func (r *Repos) SetPageSize(pageSize int) {
-	r.Page = 1
-	r.PerPage = pageSize
+	r.before = nil
+	r.after = nil
+	r.first = githubv4.Int(pageSize)
 	go r.Refresh()
 }
 
 // First navigates to the first page of the repository list.
-func (r *Repos) First() {
-	if r.Response != nil {
-		r.Page = r.FirstPage
-		go r.Refresh()
-	}
-}
+func (r *Repos) First() {}
 
 // Last navigates to the last page of the repository list.
-func (r *Repos) Last() {
-	if r.Response != nil {
-		r.Page = r.LastPage
-		go r.Refresh()
-	}
-}
+func (r *Repos) Last() {}
 
 // Prev navigates to the previous page of the repository list.
 func (r *Repos) Prev() {
-	if r.Response != nil {
-		r.Page = r.PrevPage
+	pageInfo := repositories.Viewer.Repositories.PageInfo
+	r.before = githubv4.NewString(githubv4.String(pageInfo.StartCursor))
+	r.after = githubv4.NewString(githubv4.String(pageInfo.EndCursor))
+	if pageInfo.HasPreviousPage {
+		r.after = nil
 		go r.Refresh()
 	}
 }
 
 // Next navigates to the next page of the repository list.
 func (r *Repos) Next() {
-	if r.Response != nil {
-		r.Page = r.NextPage
+	pageInfo := repositories.Viewer.Repositories.PageInfo
+	totalRepos := repositories.Viewer.Repositories.TotalCount
+	r.before = githubv4.NewString(githubv4.String(pageInfo.StartCursor))
+	r.after = githubv4.NewString(githubv4.String(pageInfo.EndCursor))
+
+	// this is to handle the edge case where both previous and next pages are false even if there's a next page.
+	edgeCase := !pageInfo.HasPreviousPage && !pageInfo.HasNextPage && totalRepos > int(r.first)
+	if pageInfo.HasNextPage || edgeCase {
+		r.before = nil
 		go r.Refresh()
 	}
 }
 
 // display renders the repository list according to the provided filter, pagination and page size options.
-func (r *Repos) display(options *github.RepositoryListOptions) {
-	repositories, res, err := r.Client.Repositories.List(r.Context, "", options)
-	if err != nil {
-		r.Table.SetCellSimple(1, 0, "[::b]an error occurred while retrieving repositories")
+func (r *Repos) display() {
+	variables := map[string]interface{}{
+		"first":   r.first,
+		"before":  r.before,
+		"after":   r.after,
+		"privacy": r.privacy,
+		"isFork":  r.isFork,
+		"orderBy": githubv4.RepositoryOrder{
+			Field:     "PUSHED_AT",
+			Direction: "DESC",
+		},
+	}
+
+	if err := r.GqlClient.Query(r.Context, &repositories, variables); err != nil {
+		_, _ = fmt.Fprintln(r.TextView, err.Error())
 		return
 	}
-	r.Response = res
-	r.setTableHeaders()
-	for row, repo := range repositories {
-		r.Table.SetCellSimple(row+1, 0, "[white::b]"+repo.GetName()).
-			SetCellSimple(row+1, 1, "[white::b]"+repo.GetDescription()).
-			SetCellSimple(row+1, 2, "[white::b]"+repo.GetHomepage()).
-			SetCellSimple(row+1, 3, "[white::b]"+repo.GetGitURL()).
-			SetCellSimple(row+1, 4, fmt.Sprintf("[white::b]%d", repo.GetStargazersCount())).
-			SetCellSimple(row+1, 5, fmt.Sprintf("[white::b]%d", repo.GetOpenIssuesCount())).
-			SetCellSimple(row+1, 6, fmt.Sprintf("[white::b]%d", repo.GetForksCount()))
+
+	_, _, width, _ := r.GetInnerRect()
+	writer := tabwriter.NewWriter(r.TextView, 0, 4, 2, '\t', 0)
+	for _, repo := range repositories.Viewer.Repositories.Nodes {
+		repoInfo := getRepoInfo(repo) + strings.Repeat("_", width)
+		_, _ = fmt.Fprintln(writer, repoInfo)
 	}
+	_ = writer.Flush()
 }
 
-// setTableHeaders sets the table headers.
-func (r *Repos) setTableHeaders() {
-	headers := []string{
-		"[gray::b]Name",
-		"[gray::b]Description",
-		"[gray::b]Homepage",
-		"[gray::b]URL",
-		"[gray::b]Stargazers",
-		"[gray::b]Open Issues Count",
-		"[gray::b]Forks"}
-
-	for i, field := range headers {
-		r.Table.SetCellSimple(0, i, field)
+// getRepoInfo returns the tab indented string representation of the repository information.
+func getRepoInfo(repo repository) string {
+	var forked, mirrored, description, topicTags, lang, stars, forks, license, updatedAt string
+	repoInfo := "\n[::b]" + repo.Name
+	if repo.IsArchived {
+		repoInfo += " [darkslategray:white:d] Archived [:black:-] "
 	}
+	if repo.IsPrivate {
+		repoInfo += " [darkslategray:white:d] Private [:black:-] "
+	}
+
+	if repo.IsFork {
+		forked = "[gray::d]Forked from " + repo.Parent.NameWithOwner + "\n"
+	} else if repo.IsMirror {
+		repoInfo += " [darkslategray:white:d] Mirror [:black:-]"
+		mirrored = "[gray::d]Mirrored from " + repo.Parent.NameWithOwner + "\n"
+	}
+
+	if len(repo.RepositoryTopics.Nodes) > 0 {
+		var topics []string
+		for _, topic := range repo.RepositoryTopics.Nodes {
+			topicName := "[white:green:d] " + topic.Topic.Name + " [:black:-]"
+			topics = append(topics, topicName)
+		}
+		topicTags = strings.Join(topics, " ") + "\n\n"
+	}
+
+	if repo.Description != nil {
+		description = "[white::d]" + *repo.Description + "\n\n"
+	}
+	if repo.PrimaryLanguage != nil {
+		lang = fmt.Sprintf("[%s]● %s\t", repo.PrimaryLanguage.Color, repo.PrimaryLanguage.Name)
+	}
+	if repo.Stargazers.TotalCount > 0 {
+		stars = fmt.Sprintf("[white]%s %d\t", string('\u2B50'), repo.Stargazers.TotalCount)
+	}
+	if repo.ForkCount > 0 {
+		forks = fmt.Sprintf("[white]%s %d\t", string('\u2442'), repo.ForkCount)
+	}
+	if repo.LicenseInfo != nil {
+		license = fmt.Sprintf("[white]%s %s\t", string('\u2696'), repo.LicenseInfo.Name)
+	}
+	if repo.PushedAt != nil {
+		updatedAt = "[gray::d]Updated on " + repo.PushedAt.Format("Jan 02, 2006")
+	}
+	repoInfo += fmt.Sprint("\n", mirrored, forked, "\n", description, topicTags, lang, stars, forks, license, updatedAt, "\n")
+	return repoInfo
 }

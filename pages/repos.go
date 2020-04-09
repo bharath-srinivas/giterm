@@ -12,17 +12,15 @@ func ReposPage(app *tview.Application, config config.Config) *Page {
 	repos := modules.RepoWidget(app, config)
 	pageSizes := modules.PageSizeWidget(repos)
 	pagination := modules.PaginationWidget(repos)
-	filters := modules.FilterWidget("Type: ", []string{"All", "Owner", "Public", "Private", "Member"}, repos)
+	filters := modules.FilterWidget("Type: ", []string{"All", "Public", "Private", "Sources", "Forks"}, repos)
 
 	header := tview.NewFlex().
 		AddItem(pageSizes, 0, 1, false).
 		AddItem(filters, 0, 1, false)
 
 	footer := tview.NewFlex().
-		AddItem(pagination.First, 0, 1, false).
 		AddItem(pagination.Prev, 0, 1, false).
-		AddItem(pagination.Next, 0, 1, false).
-		AddItem(pagination.Last, 0, 1, false)
+		AddItem(pagination.Next, 0, 1, false)
 
 	layout := tview.NewFlex().
 		SetDirection(tview.FlexRow).
@@ -40,10 +38,8 @@ func ReposPage(app *tview.Application, config config.Config) *Page {
 				pageSizes,
 				filters,
 				repos,
-				pagination.First,
 				pagination.Prev,
 				pagination.Next,
-				pagination.Last,
 			},
 		},
 	}
