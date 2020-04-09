@@ -184,9 +184,7 @@ func ContributionsWidget(app *tview.Application, config config.Config) *Contribu
 
 // Refresh refreshes the contributions widget.
 func (c *Contributions) Refresh() {
-	c.app.QueueUpdateDraw(func() {
-		c.display()
-	})
+	c.app.QueueUpdateDraw(c.display)
 }
 
 // display renders the contribution activities of a user in a tree view.
