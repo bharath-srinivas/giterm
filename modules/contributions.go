@@ -194,7 +194,7 @@ func (c *Contributions) display() {
 	c.keys = nil
 	c.nodes = map[string]ContributionsCollection{}
 	if err := c.getContributionData(); err != nil {
-		c.createRootNode(err.Error())
+		c.createRootNode("[::b]an error occurred while retrieving your contributions")
 		return
 	}
 

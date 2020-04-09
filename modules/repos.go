@@ -170,7 +170,7 @@ func (r *Repos) display() {
 	}
 
 	if err := r.GqlClient.Query(r.Context, &repositories, variables); err != nil {
-		_, _ = fmt.Fprintln(r.TextView, err.Error())
+		_, _ = fmt.Fprintln(r.TextView, "[::b]an error occurred while retrieving your repositories")
 		return
 	}
 
