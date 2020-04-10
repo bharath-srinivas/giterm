@@ -25,7 +25,7 @@ type repoQuery struct {
 				HasPreviousPage bool
 				HasNextPage     bool
 			}
-		} `graphql:"repositories (first: $first, before: $before, after:$after, privacy: $privacy, isFork: $isFork, orderBy: $orderBy)"`
+		} `graphql:"repositories (first: $first, last: $last, before: $before, after:$after, privacy: $privacy, isFork: $isFork, orderBy: $orderBy)"`
 	}
 }
 
@@ -68,7 +68,8 @@ var repositories repoQuery
 type Repos struct {
 	*views.TextWidget
 
-	first   githubv4.Int
+	first   *githubv4.Int
+	last    *githubv4.Int
 	privacy *githubv4.RepositoryPrivacy
 	isFork  *githubv4.Boolean
 	before  *githubv4.String
@@ -119,7 +120,8 @@ func (r *Repos) Filter(repoType string) {
 func (r *Repos) SetPageSize(pageSize int) {
 	r.before = nil
 	r.after = nil
-	r.first = githubv4.Int(pageSize)
+	r.last = nil
+	r.first = githubv4.NewInt(githubv4.Int(pageSize))
 	go r.Refresh()
 }
 
@@ -135,6 +137,10 @@ func (r *Repos) Prev() {
 	r.before = githubv4.NewString(githubv4.String(pageInfo.StartCursor))
 	r.after = githubv4.NewString(githubv4.String(pageInfo.EndCursor))
 	if pageInfo.HasPreviousPage {
+		if r.first != nil {
+			r.last = r.first
+			r.first = nil
+		}
 		r.after = nil
 		go r.Refresh()
 	}
@@ -143,13 +149,13 @@ func (r *Repos) Prev() {
 // Next navigates to the next page of the repository list.
 func (r *Repos) Next() {
 	pageInfo := repositories.Viewer.Repositories.PageInfo
-	totalRepos := repositories.Viewer.Repositories.TotalCount
 	r.before = githubv4.NewString(githubv4.String(pageInfo.StartCursor))
 	r.after = githubv4.NewString(githubv4.String(pageInfo.EndCursor))
-
-	// this is to handle the edge case where both previous and next pages are false even if there's a next page.
-	edgeCase := !pageInfo.HasPreviousPage && !pageInfo.HasNextPage && totalRepos > int(r.first)
-	if pageInfo.HasNextPage || edgeCase {
+	if pageInfo.HasNextPage {
+		if r.last != nil {
+			r.first = r.last
+			r.last = nil
+		}
 		r.before = nil
 		go r.Refresh()
 	}
@@ -159,6 +165,7 @@ func (r *Repos) Next() {
 func (r *Repos) display() {
 	variables := map[string]interface{}{
 		"first":   r.first,
+		"last":    r.last,
 		"before":  r.before,
 		"after":   r.after,
 		"privacy": r.privacy,
