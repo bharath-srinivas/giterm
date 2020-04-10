@@ -10,9 +10,6 @@ import (
 	"github.com/bharath-srinivas/giterm/config"
 )
 
-// user holds the github user information.
-var user *github.User
-
 // Client represents the github client.
 type Client struct {
 	GqlClient *githubv4.Client
@@ -30,11 +27,6 @@ func NewClient(config config.Config) *Client {
 		GqlClient: githubV4Client(ctx, config),
 	}
 	return client
-}
-
-// GetUser returns the current github user.
-func (c *Client) GetUser() *github.User {
-	return user
 }
 
 // githubV3Client returns a new github API client with the provided token and context.
