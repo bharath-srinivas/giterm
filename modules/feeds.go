@@ -49,19 +49,18 @@ func (f *Feeds) display() {
 		resp, err := http.Get(f.feedsUrl)
 		if err != nil {
 			_, _ = fmt.Fprintln(f.TextView, "[::b]an error occurred while retrieving feeds")
-			break
+			return
 		}
 
 		feeds, err := parser.Parse(resp.Body)
 		if err != nil {
 			_ = resp.Body.Close()
 			_, _ = fmt.Fprintln(f.TextView, "[::b]an error occurred while retrieving feeds")
-			break
+			return
 		}
 
 		_ = resp.Body.Close()
 		if len(feeds.Entries) == 0 {
-			_ = resp.Body.Close()
 			break
 		}
 
