@@ -10,6 +10,12 @@ import (
 	"github.com/spf13/viper"
 )
 
+var (
+	configDir  = ".giterm" // config directory
+	configName = "config"  // config filename
+	configType = "json"    // config file extension
+)
+
 // Config represents the configuration fields of the giterm app.
 type Config struct {
 	Token    string
@@ -47,7 +53,6 @@ func setConfigPath() error {
 		return err
 	}
 
-	configDir := ".giterm"
 	configPath := path.Join(usr.HomeDir, configDir)
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		if err := os.Mkdir(configPath, 0777); err != nil {
@@ -56,8 +61,8 @@ func setConfigPath() error {
 	}
 
 	viper.AddConfigPath(configPath)
-	viper.SetConfigName("config")
-	viper.SetConfigType("json")
+	viper.SetConfigName(configName)
+	viper.SetConfigType(configType)
 	return nil
 }
 
