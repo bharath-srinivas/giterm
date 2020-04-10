@@ -146,6 +146,7 @@ type ContributionsCollection struct {
 // contributionQuery represents a graphql query
 type contributionQuery struct {
 	Viewer struct {
+		Login                   string
 		ContributionsCollection `graphql:"contributionsCollection(from: $from, to: $to)"`
 	}
 }
@@ -207,7 +208,7 @@ func (c *Contributions) display() {
 			SetSelectable(true)
 
 		if !c.nodes[key].HasAnyContributions {
-			text := fmt.Sprintf(" [::d]" + c.Username + " had no activity during this period.")
+			text := fmt.Sprintf(" [::d]" + contributions.Viewer.Login + " had no activity during this period.")
 			node := tview.NewTreeNode(text).SetSelectable(false)
 			childNode.AddChild(node)
 			root.AddChild(childNode)

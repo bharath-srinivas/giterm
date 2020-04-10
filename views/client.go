@@ -15,7 +15,6 @@ var user *github.User
 
 // Client represents the github client.
 type Client struct {
-	Username  string
 	GqlClient *githubv4.Client
 
 	*github.Client
@@ -30,7 +29,6 @@ func NewClient(config config.Config) *Client {
 		Client:    githubV3Client(ctx, config),
 		GqlClient: githubV4Client(ctx, config),
 	}
-	client.getUsername()
 	return client
 }
 
@@ -55,15 +53,4 @@ func githubV4Client(context context.Context, config config.Config) *githubv4.Cli
 	)
 	oauth2Client := oauth2.NewClient(context, tokenSource)
 	return githubv4.NewClient(oauth2Client)
-}
-
-// getUsername returns the username of the current user.
-func (c *Client) getUsername() {
-	u, _, err := c.Client.Users.Get(c.Context, "")
-	if err != nil {
-		c.Username = ""
-		return
-	}
-	c.Username = u.GetLogin()
-	user = u
 }
