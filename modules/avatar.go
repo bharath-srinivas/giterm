@@ -35,16 +35,14 @@ func (a *Avatar) display() {
 	_, _, width, height := a.TextView.GetInnerRect()
 	bg, _ := colorful.Hex("#000000")
 	sfx, sfy := 1, 2
-	go func() {
-		avatar, err := ansimage.NewScaledFromURL(user.Viewer.AvatarUrl, sfy*height, sfx*width, bg, ansimage.ScaleModeResize, ansimage.NoDithering)
-		if err != nil {
-			return
-		}
+	avatar, err := ansimage.NewScaledFromURL(user.Viewer.AvatarUrl, sfy*height, sfx*width, bg, ansimage.ScaleModeResize, ansimage.NoDithering)
+	if err != nil {
+		return
+	}
 
-		writer := tview.ANSIWriter(a)
-		reader := bytes.NewBufferString(avatar.Render())
-		if _, err := io.Copy(writer, reader); err != nil {
-			return
-		}
-	}()
+	writer := tview.ANSIWriter(a)
+	reader := bytes.NewBufferString(avatar.Render())
+	if _, err := io.Copy(writer, reader); err != nil {
+		return
+	}
 }
