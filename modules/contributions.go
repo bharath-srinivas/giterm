@@ -185,7 +185,10 @@ func ContributionsWidget(app *tview.Application, config config.Config) *Contribu
 
 // Refresh refreshes the contributions widget.
 func (c *Contributions) Refresh() {
-	c.app.QueueUpdateDraw(c.display)
+	c.app.QueueUpdateDraw(func() {
+		c.TreeView.GetRoot().ClearChildren()
+		c.display()
+	})
 }
 
 // display renders the contribution activities of a user in a tree view.
@@ -202,7 +205,7 @@ func (c *Contributions) display() {
 		return
 	}
 
-	root := c.TreeView.GetRoot().ClearChildren()
+	root := c.TreeView.GetRoot()
 	for _, key := range c.keys {
 		childNode := tview.NewTreeNode("[::b]" + key).
 			SetSelectable(true)
