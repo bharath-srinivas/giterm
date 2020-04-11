@@ -19,8 +19,8 @@ func NewTextView(app *tview.Application, config config.Config, bordered bool) *T
 		SetScrollable(true)
 	widget.SetBorder(bordered)
 	return &TextWidget{
-		Base:     NewBase(app, config),
-		TextView: widget,
+		NewBase(app, config),
+		widget,
 	}
 }
 

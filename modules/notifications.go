@@ -25,15 +25,15 @@ func NotificationsWidget(app *tview.Application, config config.Config) *Notifica
 	widget.SetWrap(false).
 		SetTitleAlign(tview.AlignCenter)
 	n := &Notifications{
-		TextWidget: widget,
-		NotificationListOptions: &github.NotificationListOptions{
+		widget,
+		&github.NotificationListOptions{
 			All: true,
 			ListOptions: github.ListOptions{
 				Page:    1,
 				PerPage: 25,
 			},
 		},
-		Response: &github.Response{},
+		&github.Response{},
 	}
 	go n.Refresh()
 	return n
@@ -90,20 +90,22 @@ func (n *Notifications) display(options *github.NotificationListOptions) {
 	table := tablewriter.NewWriter(n.TextView)
 	table.SetBorder(false)
 	table.SetAutoWrapText(false)
-	table.SetColumnSeparator("")
+	table.SetColumnSeparator(" ")
+	table.SetRowLine(true)
+	table.SetRowSeparator("_")
+	table.SetCenterSeparator("")
 	table.SetColMinWidth(1, 165)
 	for _, notification := range notifications {
-		reason := fmt.Sprintf("[:green:d]%s[:black:]", notification.GetReason())
+		reason := fmt.Sprintf("[:green:d] %s [:black:]", notification.GetReason())
 		notificationType := notification.GetSubject().GetType()
 		repoName := "[::b]" + notification.GetRepository().GetFullName()
-		subject := notification.GetSubject().GetTitle()
+		subject := tview.Escape(notification.GetSubject().GetTitle())
 		time := timeago.NoMax(timeago.English).Format(notification.GetUpdatedAt())
 		table.Append([]string{
-			notificationType,
-			repoName + "\n" + subject + "\n",
-			reason,
-			"[gray::d]" + time,
-		})
+			"\n" + notificationType,
+			"\n" + repoName + "\n" + subject,
+			"\n" + reason,
+			"\n" + "[gray::d]" + time})
 	}
 	table.Render()
 }

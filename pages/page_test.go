@@ -33,6 +33,18 @@ func TestMakePage(t *testing.T) {
 		{
 			name:     "valid page",
 			config:   config.Config{},
+			pageName: "profile",
+			expected: "Profile",
+		},
+		{
+			name:     "without feeds url",
+			config:   config.Config{},
+			pageName: "",
+			expected: "",
+		},
+		{
+			name:     "with feeds url",
+			config:   config.Config{FeedsUrl: "test_feeds_url"},
 			pageName: "feeds",
 			expected: "Feeds",
 		},
@@ -61,19 +73,27 @@ func TestPage_PrevWidget(t *testing.T) {
 			app:      tview.NewApplication(),
 			name:     "without children",
 			pageName: "",
+			focusIdx: -1,
+			expected: "tview.Primitive",
+		},
+		{
+			app:      tview.NewApplication(),
+			name:     "with child",
+			pageName: "",
+			focusIdx: -1,
 			expected: "tview.Primitive",
 		},
 		{
 			app:      tview.NewApplication(),
 			name:     "with children",
-			pageName: "feeds",
+			pageName: "profile",
 			focusIdx: 0,
 			expected: "tview.Primitive",
 		},
 		{
 			app:      tview.NewApplication(),
 			name:     "with children",
-			pageName: "feeds",
+			pageName: "repos",
 			focusIdx: 2,
 			expected: "tview.Primitive",
 		},
@@ -82,7 +102,17 @@ func TestPage_PrevWidget(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			page := testPage(config.Config{}, tt.pageName)
-			if tt.focusIdx > 0 {
+			if tt.pageName == "" && tt.name == "with child" {
+				page = &Page{
+					Name: "",
+					Widgets: &Widgets{
+						Parent:   tview.NewBox(),
+						Children: []tview.Primitive{tview.NewBox()},
+					},
+				}
+			}
+
+			if tt.focusIdx > -1 {
 				tt.app.SetFocus(page.Children[tt.focusIdx])
 			}
 			primitiveType := reflect.TypeOf((*tview.Primitive)(nil)).Elem()
@@ -96,18 +126,31 @@ func TestPage_PrevWidget(t *testing.T) {
 
 func TestPage_NextWidget(t *testing.T) {
 	tests := []struct {
+		app      *tview.Application
 		name     string
 		pageName string
+		focusIdx int
 		expected string
 	}{
 		{
+			app:      tview.NewApplication(),
 			name:     "without children",
 			pageName: "",
+			focusIdx: -1,
 			expected: "tview.Primitive",
 		},
 		{
+			app:      tview.NewApplication(),
+			name:     "with child",
+			pageName: "",
+			focusIdx: -1,
+			expected: "tview.Primitive",
+		},
+		{
+			app:      tview.NewApplication(),
 			name:     "with children",
-			pageName: "feeds",
+			pageName: "profile",
+			focusIdx: 2,
 			expected: "tview.Primitive",
 		},
 	}
@@ -115,6 +158,19 @@ func TestPage_NextWidget(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			page := testPage(config.Config{}, tt.pageName)
+			if tt.pageName == "" && tt.name == "with child" {
+				page = &Page{
+					Name: "",
+					Widgets: &Widgets{
+						Parent:   tview.NewBox(),
+						Children: []tview.Primitive{tview.NewBox()},
+					},
+				}
+			}
+
+			if tt.focusIdx > -1 {
+				tt.app.SetFocus(page.Children[tt.focusIdx])
+			}
 			primitiveType := reflect.TypeOf((*tview.Primitive)(nil)).Elem()
 			actual := reflect.TypeOf(page.NextWidget())
 			if !actual.Implements(primitiveType) {
@@ -146,7 +202,7 @@ func TestPages_Get(t *testing.T) {
 		},
 		{
 			name:     "valid page",
-			pageName: "Feeds",
+			pageName: "Repos",
 			expected: "*pages.Page",
 		},
 	}
@@ -179,13 +235,13 @@ func TestPages_Prev(t *testing.T) {
 		},
 		{
 			name:     "valid page",
-			pageName: "Feeds",
+			pageName: "Notifications",
 			expected: "Repos",
 		},
 		{
 			name:     "valid page",
-			pageName: "Profile",
-			expected: "Notifications",
+			pageName: "Repos",
+			expected: "Profile",
 		},
 	}
 
@@ -212,8 +268,13 @@ func TestPages_Next(t *testing.T) {
 			expected: "",
 		},
 		{
+			name:     "invalid page",
+			pageName: "Unknown",
+			expected: "Notifications",
+		},
+		{
 			name:     "valid page",
-			pageName: "Feeds",
+			pageName: "Repos",
 			expected: "Notifications",
 		},
 	}

@@ -3,8 +3,10 @@ package modules
 
 import (
 	"fmt"
+	"net/http"
+	"strings"
 
-	"github.com/google/go-github/v30/github"
+	"github.com/mmcdole/gofeed/atom"
 	"github.com/rivo/tview"
 
 	"github.com/bharath-srinivas/giterm/config"
@@ -15,94 +17,61 @@ import (
 // Feeds represents the github feeds.
 type Feeds struct {
 	*views.TextWidget
-	*github.ListOptions
-	*github.Response
+	feedsUrl string
 }
 
 // FeedsWidget returns a new instance of feeds widget.
 func FeedsWidget(app *tview.Application, config config.Config) *Feeds {
 	widget := views.NewTextView(app, config, true)
-	widget.SetTextAlign(tview.AlignCenter)
-	return &Feeds{
-		TextWidget:  widget,
-		ListOptions: &github.ListOptions{},
-		Response:    &github.Response{},
+	widget.SetTextAlign(tview.AlignCenter).
+		SetTitle(string('\U0001F559') + " [green::b]Feeds").
+		SetBorder(true)
+	f := &Feeds{
+		widget,
+		config.FeedsUrl,
 	}
+	go f.Refresh()
+	return f
 }
 
 // Refresh refreshes the feeds widget.
 func (f *Feeds) Refresh() {
-	f.Redraw(func() {
-		f.display(f.ListOptions)
-	})
+	f.Redraw(f.display)
 }
 
-// SetPageSize sets the page size.
-func (f *Feeds) SetPageSize(pageSize int) {
-	f.ListOptions.Page = 1
-	f.ListOptions.PerPage = pageSize
-	go f.Refresh()
-}
-
-// First navigates to the first page of the feed.
-func (f *Feeds) First() {
-	if f.Response != nil {
-		f.ListOptions.Page = f.FirstPage
-		go f.Refresh()
-	}
-}
-
-// Last navigates to the last page of the feed.
-func (f *Feeds) Last() {
-	if f.Response != nil {
-		f.ListOptions.Page = f.LastPage
-		go f.Refresh()
-	}
-}
-
-// Prev navigates to the previous page of the feed.
-func (f *Feeds) Prev() {
-	if f.Response != nil {
-		f.ListOptions.Page = f.PrevPage
-		go f.Refresh()
-	}
-}
-
-// Next navigates to the next page of the feed.
-func (f *Feeds) Next() {
-	if f.Response != nil {
-		f.ListOptions.Page = f.NextPage
-		go f.Refresh()
-	}
-}
-
-// display renders the feeds according to the provided pagination and page size options.
-func (f *Feeds) display(options *github.ListOptions) {
-	events, res, err := f.Client.Activity.ListEventsReceivedByUser(f.Context, f.Username, false, options)
-	if err != nil {
-		_, _ = fmt.Fprintln(f.TextView, "[::b]an error occurred while retrieving feeds")
-		return
-	}
-	f.Response = res
-	for _, event := range events {
-		switch *event.Type {
-		case "CreateEvent":
-			payload, _ := event.ParsePayload()
-			if payload.(*github.CreateEvent).GetRefType() == "repository" {
-				time := timeago.NoMax(timeago.English).Format(event.GetCreatedAt())
-				_, _ = fmt.Fprintf(f.TextView, "[::b]%s [::d]created a repository [::b]%s [gray::d]%s\n\n", event.Actor.GetLogin(), event.Repo.GetName(), time)
-			}
-		case "PushEvent":
-			time := timeago.NoMax(timeago.English).Format(event.GetCreatedAt())
-			_, _ = fmt.Fprintf(f.TextView, "[::b]%s [::d]pushed to [::b]%s [gray::d]%s\n\n", event.Actor.GetLogin(), event.Repo.GetName(), time)
-		case "ForkEvent":
-			payload, _ := event.ParsePayload()
-			fork := payload.(*github.ForkEvent).Forkee.GetFullName()
-			time := timeago.NoMax(timeago.English).Format(event.GetCreatedAt())
-			_, _ = fmt.Fprintf(f.TextView, "[::b]%s [::d]forked [::b]%s [::d]from [::b]%s [gray::d]%s\n\n", event.Actor.GetLogin(), fork, event.Repo.GetName(), time)
-		case "WatchEvent":
-			time := timeago.NoMax(timeago.English).Format(event.GetCreatedAt())
-			_, _ = fmt.Fprintf(f.TextView, "[::b]%s [::d]starred [::b]%s [gray::d]%s\n\n", event.Actor.GetLogin(), event.Repo.GetName(), time)
+// display renders the feeds in a text view.
+func (f *Feeds) display() {
+	page := 1
+	parser := atom.Parser{}
+	for {
+		f.feedsUrl = fmt.Sprintf("%s&page=%d", f.feedsUrl, page)
+		resp, err := http.Get(f.feedsUrl)
+		if err != nil {
+			_, _ = fmt.Fprintln(f.TextView, "[::b]an error occurred while retrieving feeds")
+			return
 		}
+
+		feeds, err := parser.Parse(resp.Body)
+		if err != nil {
+			_ = resp.Body.Close()
+			_, _ = fmt.Fprintln(f.TextView, "[::b]an error occurred while retrieving feeds")
+			return
+		}
+
+		_ = resp.Body.Close()
+		if len(feeds.Entries) == 0 {
+			break
+		}
+
+		for _, entry := range feeds.Entries {
+			time := "[gray::d]" + timeago.NoMax(timeago.English).Format(*entry.PublishedParsed)
+			title := strings.Split(entry.Title, " ")
+			user, repo := title[0], title[len(title)-1]
+			title[0] = "[::b]" + user + "[::d]"
+			title[len(title)-1] = "[::b]" + repo + "[::d]"
+			feed := strings.Join(title, " ")
+			_, _ = fmt.Fprintln(f.TextView, feed+"\t"+time+"\n")
+		}
+		page += 1
 	}
 }

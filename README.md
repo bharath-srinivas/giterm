@@ -2,7 +2,7 @@
 [![Build Status](https://travis-ci.org/bharath-srinivas/giterm.svg?branch=master)](https://travis-ci.org/bharath-srinivas/giterm)
 [![Go Report Card](https://goreportcard.com/badge/github.com/bharath-srinivas/giterm)](https://goreportcard.com/report/github.com/bharath-srinivas/giterm)
 
-A terminal based UI for Github :sunglasses:
+A terminal client for Github :sunglasses:
 
 ## Installation
 ### Installing from source
@@ -21,7 +21,7 @@ When running giterm for the first time, you have to set your personal access tok
 the application.
 
 1. Create you personal access token by clicking [here](https://github.com/settings/tokens).
-Refer to the [Required scopes](#required-scopes) when creating the token
+Refer to the [Required scopes](#required-scopes) section when creating the token
 3. Copy your personal access token and keep it ready
 4. Now set the token by executing the following command:
 ```bash
@@ -41,6 +41,21 @@ it to function properly.
 | `notifications`   | Access notifications                            |
 | `user`            | Update all user data                            |
 | `read:discussion` | Read team discussions                           |
+
+### Feeds (optional)
+If you wish to view your github news feeds along with other data, you have to set your
+private github news feed URL.
+
+To get your private github news feed URL, execute the following command:
+```bash
+$ curl -u "username" https://api.github.com/feeds | grep -oP '(?<="current_user_url": ")[^"]*'
+```
+
+Running the above command will ask you to enter your github password. After getting the URL,
+you can set it using the following command:
+```bash
+$ giterm --feeds-url [your_github_feed_url]
+```
 
 ## Usage
 
