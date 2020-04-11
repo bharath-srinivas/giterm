@@ -25,15 +25,15 @@ func NotificationsWidget(app *tview.Application, config config.Config) *Notifica
 	widget.SetWrap(false).
 		SetTitleAlign(tview.AlignCenter)
 	n := &Notifications{
-		TextWidget: widget,
-		NotificationListOptions: &github.NotificationListOptions{
+		widget,
+		&github.NotificationListOptions{
 			All: true,
 			ListOptions: github.ListOptions{
 				Page:    1,
 				PerPage: 25,
 			},
 		},
-		Response: &github.Response{},
+		&github.Response{},
 	}
 	go n.Refresh()
 	return n
@@ -96,7 +96,7 @@ func (n *Notifications) display(options *github.NotificationListOptions) {
 	table.SetCenterSeparator("")
 	table.SetColMinWidth(1, 165)
 	for _, notification := range notifications {
-		reason := fmt.Sprintf("[:green:d]%s[:black:]", notification.GetReason())
+		reason := fmt.Sprintf("[:green:d] %s [:black:]", notification.GetReason())
 		notificationType := notification.GetSubject().GetType()
 		repoName := "[::b]" + notification.GetRepository().GetFullName()
 		subject := tview.Escape(notification.GetSubject().GetTitle())

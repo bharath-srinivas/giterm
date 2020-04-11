@@ -57,7 +57,7 @@ func UserWidget(app *tview.Application, config config.Config) *User {
 	widget.SetWrap(true).
 		SetWordWrap(true).
 		SetTitle(string('\U0001F464') + " [green::b]User")
-	u := &User{TextWidget: widget}
+	u := &User{widget}
 	go u.Refresh()
 	return u
 }
@@ -113,7 +113,7 @@ func UserStatsWidget(app *tview.Application, config config.Config) *UserStats {
 	widget := views.NewTextView(app, config, true)
 	widget.SetWrap(false).
 		SetTitle("[green::b]User stats")
-	u := &UserStats{TextWidget: widget}
+	u := &UserStats{widget}
 	go u.Refresh()
 	return u
 }

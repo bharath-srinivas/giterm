@@ -26,10 +26,9 @@ func FeedsWidget(app *tview.Application, config config.Config) *Feeds {
 	widget.SetTextAlign(tview.AlignCenter).
 		SetTitle(string('\U0001F559') + " [green::b]Feeds").
 		SetBorder(true)
-
 	f := &Feeds{
-		TextWidget: widget,
-		feedsUrl:   config.FeedsUrl,
+		widget,
+		config.FeedsUrl,
 	}
 	go f.Refresh()
 	return f
