@@ -6,6 +6,7 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/gdamore/tcell"
 	"github.com/rivo/tview"
 	"github.com/shurcooL/githubv4"
 
@@ -80,6 +81,15 @@ type Repos struct {
 func RepoWidget(app *tview.Application, config config.Config) *Repos {
 	widget := views.NewTextView(app, config, true)
 	r := &Repos{TextWidget: widget}
+	// Todo: find a better way to deal with the render issue.
+	_, _, oldWidth, oldHeight := widget.GetInnerRect()
+	r.SetDrawFunc(func(screen tcell.Screen, x, y, width, height int) (int, int, int, int) {
+		if width != oldWidth && height != oldHeight {
+			oldWidth, oldHeight = width, height
+			go r.Refresh()
+		}
+		return r.GetInnerRect()
+	})
 	return r
 }
 
