@@ -10,11 +10,12 @@ require (
 	github.com/golang/protobuf v1.3.4 // indirect
 	github.com/google/go-github/v30 v30.1.0
 	github.com/lucasb-eyer/go-colorful v1.0.3
-	github.com/mattn/go-runewidth v0.0.9 // indirect
+	github.com/mattn/go-runewidth v0.0.9
 	github.com/mmcdole/gofeed v1.0.0-beta2
 	github.com/mmcdole/goxpp v0.0.0-20181012175147-0068e33feabf // indirect
 	github.com/olekukonko/tablewriter v0.0.4
 	github.com/rivo/tview v0.0.0-20200404204604-ca37f83cb2e7
+	github.com/rivo/uniseg v0.1.0
 	github.com/shurcooL/githubv4 v0.0.0-20191127044304-8f68eb5628d0
 	github.com/shurcooL/graphql v0.0.0-20181231061246-d48a9a75455f // indirect
 	github.com/spf13/pflag v1.0.3
