@@ -80,7 +80,7 @@ func UserWidget(app *tview.Application, config config.Config) *User {
 	widget := views.NewTextView(app, config, true)
 	widget.SetWrap(true).
 		SetWordWrap(true).
-		SetTitle(string('\U0001F464') + " [green::b]User")
+		SetTitle("\U0001F464 [green::b]User")
 	u := &User{widget}
 	go u.Refresh()
 	return u
@@ -107,10 +107,10 @@ func (u *User) display() {
 	_, _ = fmt.Fprintf(u, formatText("", user.Viewer.Name, "[::b]", "\n"))
 	_, _ = fmt.Fprintf(u, formatText("", user.Viewer.Login, "[gray::d]", "\n\n"))
 	_, _ = fmt.Fprintf(u, formatText("", bio, "", "\n\n"))
-	_, _ = fmt.Fprintf(u, formatText(string('\U0001F465'), user.Viewer.Company, "[::b]", "\n\n"))
-	_, _ = fmt.Fprintf(u, formatText(string('\U0001F4CD'), user.Viewer.Location, "", "\n\n"))
-	_, _ = fmt.Fprintf(u, formatText(string('\u2709'), user.Viewer.Email, "", "\n\n"))
-	_, _ = fmt.Fprintf(u, formatText(string('\U0001F517'), user.Viewer.WebsiteUrl, "", "\n\n"))
+	_, _ = fmt.Fprintf(u, formatText("\U0001F465", user.Viewer.Company, "[::b]", "\n\n"))
+	_, _ = fmt.Fprintf(u, formatText("\U0001F4CD", user.Viewer.Location, "", "\n\n"))
+	_, _ = fmt.Fprintf(u, formatText("\u2709", user.Viewer.Email, "", "\n\n"))
+	_, _ = fmt.Fprintf(u, formatText("\U0001F517", user.Viewer.WebsiteUrl, "", "\n\n"))
 	if user.Viewer.IsDeveloperProgramMember {
 		_, _ = fmt.Fprintln(u, "[::b]Developer Program Member")
 	}

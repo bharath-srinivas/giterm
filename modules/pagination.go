@@ -31,22 +31,22 @@ type Pagination struct {
 // PaginationWidget returns a new pagination widget that contains buttons to navigate to first, last, previous and next pages.
 func PaginationWidget(paginator Paginator) *Pagination {
 	var pagination Pagination
-	pagination.First = createButton(string('\U000000AB')).
+	pagination.First = createButton("\u00AB").
 		SetSelectedFunc(func() {
 			paginator.First()
 		})
 
-	pagination.Last = createButton(string('\U000000BB')).
+	pagination.Last = createButton("\u00BB").
 		SetSelectedFunc(func() {
 			paginator.Last()
 		})
 
-	pagination.Prev = createButton(string('\U000025C4')).
+	pagination.Prev = createButton("\u25C4").
 		SetSelectedFunc(func() {
 			paginator.Prev()
 		})
 
-	pagination.Next = createButton(string('\U000025BA')).
+	pagination.Next = createButton("\u25BA").
 		SetSelectedFunc(func() {
 			paginator.Next()
 		})

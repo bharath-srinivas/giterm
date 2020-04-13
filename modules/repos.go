@@ -236,16 +236,16 @@ func getRepoInfo(repo repository) string {
 		description = "[white::d]" + *repo.Description + "\n\n"
 	}
 	if repo.PrimaryLanguage != nil {
-		lang = fmt.Sprintf("[%s]%s %s\t", repo.PrimaryLanguage.Color, string('\u25CF'), repo.PrimaryLanguage.Name)
+		lang = fmt.Sprintf("[%s]\u25CF %s\t", repo.PrimaryLanguage.Color, repo.PrimaryLanguage.Name)
 	}
 	if repo.Stargazers.TotalCount > 0 {
-		stars = fmt.Sprintf("[white]%s %d\t", string('\u2605'), repo.Stargazers.TotalCount)
+		stars = fmt.Sprintf("[white]\u2605 %d\t", repo.Stargazers.TotalCount)
 	}
 	if repo.ForkCount > 0 {
-		forks = fmt.Sprintf("[white]%s %d\t", string('\u2442'), repo.ForkCount)
+		forks = fmt.Sprintf("[white]\u2442 %d\t", repo.ForkCount)
 	}
 	if repo.LicenseInfo != nil {
-		license = fmt.Sprintf("[white]%s %s\t", string('\u2696'), repo.LicenseInfo.Name)
+		license = fmt.Sprintf("[white]\u2696 %s\t", repo.LicenseInfo.Name)
 	}
 	if repo.PushedAt != nil {
 		updatedAt = "[gray::d]Updated on " + repo.PushedAt.Format("Jan 02, 2006")

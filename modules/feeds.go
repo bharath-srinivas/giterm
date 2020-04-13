@@ -24,8 +24,7 @@ type Feeds struct {
 func FeedsWidget(app *tview.Application, config config.Config) *Feeds {
 	widget := views.NewTextView(app, config, true)
 	widget.SetTextAlign(tview.AlignCenter).
-		SetTitle(string('\U0001F559') + " [green::b]Feeds").
-		SetBorder(true)
+		SetTitle("\U0001F559 [green::b]Feeds")
 	f := &Feeds{
 		widget,
 		config.FeedsUrl,

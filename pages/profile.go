@@ -30,7 +30,7 @@ func ProfilePage(app *tview.Application, config config.Config) *Page {
 		AddItem(leftPane, 0, 1, false).
 		AddItem(rightPane, 0, 3, false)
 
-	layout.SetTitle(string('\U0001F642') + " [green::b]Profile").
+	layout.SetTitle("\U0001F642 [green::b]Profile").
 		SetBorder(true)
 
 	return &Page{

@@ -20,7 +20,7 @@ func NotificationsPage(app *tview.Application, config config.Config) *Page {
 		SetDirection(tview.FlexRow).
 		AddItem(notifications, 0, 15, false).
 		AddItem(footer, 0, 1, false)
-	layout.SetTitle(string('\U0001F514') + " [green::b]Notifications").
+	layout.SetTitle("\U0001F514 [green::b]Notifications").
 		SetBorder(true)
 
 	return &Page{

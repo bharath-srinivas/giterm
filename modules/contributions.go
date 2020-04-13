@@ -168,7 +168,7 @@ type Contributions struct {
 func ContributionsWidget(app *tview.Application, config config.Config) *Contributions {
 	widget := tview.NewTreeView().
 		SetTopLevel(1)
-	widget.SetTitle(string('\U0001F4C8') + " [green::b]Contribution activity").
+	widget.SetTitle("\U0001F4C8 [green::b]Contribution activity").
 		SetBorder(true)
 	c := &Contributions{
 		app:      app,
