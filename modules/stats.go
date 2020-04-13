@@ -31,7 +31,7 @@ func (u *UserStats) Refresh() {
 
 // display renders the user stats data in a text view.
 func (u *UserStats) display() {
-	if user == (userQuery{}) {
+	if user == nil {
 		_, _ = fmt.Fprint(u, "[::b]an error occurred while retrieving user data")
 		return
 	}

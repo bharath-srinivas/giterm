@@ -41,6 +41,10 @@ func (a *Avatar) Refresh() {
 
 // display renders the avatar within the widget.
 func (a *Avatar) display() {
+	if user == nil {
+		return
+	}
+
 	_, _, width, height := a.TextView.GetInnerRect()
 	bg, _ := colorful.Hex("#000000")
 	sfx, sfy := 1, 2

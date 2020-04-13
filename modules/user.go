@@ -11,7 +11,7 @@ import (
 )
 
 // userQuery represents a graphql query.
-type userQuery struct {
+type userQuery *struct {
 	Viewer struct {
 		AvatarUrl                string
 		Name                     string
@@ -40,6 +40,30 @@ type userQuery struct {
 		Gists struct {
 			TotalCount int
 		}
+		PinnedItems struct {
+			TotalCount int
+			Nodes      []struct {
+				Repository struct {
+					Name          string
+					NameWithOwner string
+					Description   string
+					IsArchived    bool
+					Owner         struct {
+						Login string
+					}
+					PrimaryLanguage *struct {
+						Name  string
+						Color string
+					}
+					Stargazers struct {
+						TotalCount int
+					}
+				} `graphql:"... on Repository"`
+				Gist struct {
+					Description string
+				} `graphql:"... on Gist"`
+			}
+		} `graphql:"pinnedItems(first:6)"`
 	}
 }
 
