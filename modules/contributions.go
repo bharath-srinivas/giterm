@@ -26,28 +26,17 @@ type ContributionsCollection struct {
 	TotalIssueContributions                            int
 	TotalRepositoriesWithContributedIssues             int
 
-	JoinedGitHubContribution struct {
+	JoinedGitHubContribution *struct {
 		OccurredAt *time.Time
 	}
 
-	FirstIssueContribution struct {
-		CreatedIssueContribution struct {
-			Issue struct {
-				Title string
-				State string
-			}
-			OccurredAt *time.Time
-		} `graphql:"... on CreatedIssueContribution"`
-	}
-
-	FirstPullRequestContribution struct {
-		CreatedPullRequestContribution struct {
-			PullRequest struct {
-				Title string
-				State string
-			}
-			OccurredAt *time.Time
-		} `graphql:"... on CreatedPullRequestContribution"`
+	CommitContributionsByRepository []struct {
+		Repository struct {
+			NameWithOwner string
+		}
+		Contributions struct {
+			TotalCount int
+		}
 	}
 
 	FirstRepositoryContribution struct {
@@ -63,28 +52,40 @@ type ContributionsCollection struct {
 		} `graphql:"... on CreatedRepositoryContribution"`
 	}
 
-	CommitContributionsByRepository []struct {
-		Repository struct {
-			NameWithOwner string
-		}
-		Contributions struct {
-			TotalCount int
-		}
-	}
-
 	RepositoryContributions struct {
 		TotalCount int
 		Nodes      []struct {
 			OccurredAt *time.Time
 			Repository struct {
 				NameWithOwner   string
-				PrimaryLanguage struct {
+				PrimaryLanguage *struct {
 					Name  string
 					Color string
 				}
 			}
 		}
-	} `graphql:"repositoryContributions(first: 25)"`
+	} `graphql:"repositoryContributions(first: 25, excludeFirst: true)"`
+
+	FirstPullRequestContribution struct {
+		CreatedPullRequestContribution struct {
+			PullRequest struct {
+				Title string
+				State string
+			}
+			OccurredAt *time.Time
+		} `graphql:"... on CreatedPullRequestContribution"`
+	}
+
+	PopularPullRequestContribution struct {
+		OccurredAt  *time.Time
+		PullRequest struct {
+			Title    string
+			State    string
+			Comments struct {
+				TotalCount int
+			}
+		}
+	}
 
 	PullRequestContributionsByRepository []struct {
 		Contributions struct {
@@ -103,7 +104,7 @@ type ContributionsCollection struct {
 		Repository struct {
 			NameWithOwner string
 		}
-	}
+	} `graphql:"pullRequestContributionsByRepository(excludeFirst:true, excludePopular: true)"`
 
 	PullRequestReviewContributionsByRepository []struct {
 		Contributions struct {
@@ -120,6 +121,27 @@ type ContributionsCollection struct {
 		} `graphql:"contributions(first: 25)"`
 		Repository struct {
 			NameWithOwner string
+		}
+	}
+
+	FirstIssueContribution struct {
+		CreatedIssueContribution struct {
+			Issue struct {
+				Title string
+				State string
+			}
+			OccurredAt *time.Time
+		} `graphql:"... on CreatedIssueContribution"`
+	}
+
+	PopularIssueContribution struct {
+		OccurredAt *time.Time
+		Issue      struct {
+			Title    string
+			State    string
+			Comments struct {
+				TotalCount int
+			}
 		}
 	}
 
@@ -140,7 +162,7 @@ type ContributionsCollection struct {
 		Repository struct {
 			NameWithOwner string
 		}
-	}
+	} `graphql:"issueContributionsByRepository(excludeFirst: true, excludePopular: true)"`
 }
 
 // contributionQuery represents a graphql query
@@ -233,6 +255,9 @@ func (c *Contributions) display() {
 		if issueNode := c.getIssueNode(key); issueNode != nil {
 			childNode.AddChild(issueNode)
 		}
+		if joinedNode := c.getJoinedNode(key); joinedNode != nil {
+			childNode.AddChild(joinedNode)
+		}
 		root.AddChild(childNode)
 	}
 }
@@ -290,15 +315,11 @@ func (c *Contributions) getRepoNode(key string) *tview.TreeNode {
 
 	nodes := c.nodes[key].RepositoryContributions.Nodes
 	var childNodes []*tview.TreeNode
-	var emptyLang struct {
-		Name  string
-		Color string
-	}
 	for _, node := range nodes {
 		repo := node.Repository.NameWithOwner
 
 		var lang string
-		if node.Repository.PrimaryLanguage != (emptyLang) {
+		if node.Repository.PrimaryLanguage != nil {
 			lang = fmt.Sprintf("[%s]● %s", node.Repository.PrimaryLanguage.Color, node.Repository.PrimaryLanguage.Name)
 		}
 		createdAt := node.OccurredAt.Format("Jan 02")
@@ -308,7 +329,7 @@ func (c *Contributions) getRepoNode(key string) *tview.TreeNode {
 	}
 
 	repoCount := len(nodes)
-	if totalRepoCount > repoCount {
+	if repoCount > totalRepoCount {
 		repoText := pluralize("repository", repoCount)
 		text := fmt.Sprintf("[gray::d]%d %s not shown", totalRepoCount-repoCount, repoText)
 		child := tview.NewTreeNode(text).SetSelectable(false)
@@ -535,6 +556,16 @@ func (c *Contributions) getIssueNode(key string) *tview.TreeNode {
 	text := fmt.Sprintf(" [::b]Opened %d %s in %d %s", totalIssues, issueText, totalRepoCount, repoText)
 	node := tview.NewTreeNode(text).SetSelectable(true)
 	node.SetChildren(childNodes)
+	return node
+}
+
+func (c *Contributions) getJoinedNode(key string) *tview.TreeNode {
+	joined := c.nodes[key].JoinedGitHubContribution
+	if joined == nil {
+		return nil
+	}
+	text := fmt.Sprintf(" [::b]Joined GitHub \U0001F38A  [gray::d]%s", joined.OccurredAt.Format("Jan 02"))
+	node := tview.NewTreeNode(text).SetSelectable(false)
 	return node
 }
 
