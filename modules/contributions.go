@@ -43,7 +43,7 @@ type ContributionsCollection struct {
 		CreatedRepositoryContribution struct {
 			Repository struct {
 				Name            string
-				PrimaryLanguage struct {
+				PrimaryLanguage *struct {
 					Name  string
 					Color string
 				}
@@ -69,8 +69,11 @@ type ContributionsCollection struct {
 	FirstPullRequestContribution *struct {
 		CreatedPullRequestContribution struct {
 			PullRequest struct {
-				Title string
-				State string
+				Title      string
+				State      string
+				Repository struct {
+					NameWithOwner string
+				}
 			}
 			OccurredAt *time.Time
 		} `graphql:"... on CreatedPullRequestContribution"`
@@ -79,8 +82,11 @@ type ContributionsCollection struct {
 	PopularPullRequestContribution *struct {
 		OccurredAt  *time.Time
 		PullRequest struct {
-			Title    string
-			State    string
+			Title      string
+			State      string
+			Repository struct {
+				NameWithOwner string
+			}
 			Comments struct {
 				TotalCount int
 			}
@@ -104,7 +110,7 @@ type ContributionsCollection struct {
 		Repository struct {
 			NameWithOwner string
 		}
-	} `graphql:"pullRequestContributionsByRepository(excludeFirst:true, excludePopular: true)"`
+	} `graphql:"pullRequestContributionsByRepository(excludeFirst: true, excludePopular: true)"`
 
 	PullRequestReviewContributionsByRepository []struct {
 		Contributions struct {
@@ -127,8 +133,11 @@ type ContributionsCollection struct {
 	FirstIssueContribution *struct {
 		CreatedIssueContribution struct {
 			Issue struct {
-				Title string
-				State string
+				Title      string
+				State      string
+				Repository struct {
+					NameWithOwner string
+				}
 			}
 			OccurredAt *time.Time
 		} `graphql:"... on CreatedIssueContribution"`
@@ -137,8 +146,11 @@ type ContributionsCollection struct {
 	PopularIssueContribution *struct {
 		OccurredAt *time.Time
 		Issue      struct {
-			Title    string
-			State    string
+			Title      string
+			State      string
+			Repository struct {
+				NameWithOwner string
+			}
 			Comments struct {
 				TotalCount int
 			}
@@ -243,14 +255,23 @@ func (c *Contributions) display() {
 		if commitNode := c.getCommitNode(key); commitNode != nil {
 			childNode.AddChild(commitNode)
 		}
+		if firstRepoNode := c.getFirstRepoNode(key); firstRepoNode != nil {
+			childNode.AddChild(firstRepoNode)
+		}
 		if createNode := c.getRepoNode(key); createNode != nil {
 			childNode.AddChild(createNode)
+		}
+		if firstPullRequestNode := c.getFirstPullRequestNode(key); firstPullRequestNode != nil {
+			childNode.AddChild(firstPullRequestNode)
 		}
 		if pullRequestNode := c.getPullRequestNode(key); pullRequestNode != nil {
 			childNode.AddChild(pullRequestNode)
 		}
 		if pullRequestReviewNode := c.getPullRequestReviewNode(key); pullRequestReviewNode != nil {
 			childNode.AddChild(pullRequestReviewNode)
+		}
+		if firstIssueNode := c.getFirstIssueNode(key); firstIssueNode != nil {
+			childNode.AddChild(firstIssueNode)
 		}
 		if issueNode := c.getIssueNode(key); issueNode != nil {
 			childNode.AddChild(issueNode)
@@ -306,11 +327,40 @@ func (c *Contributions) getCommitNode(key string) *tview.TreeNode {
 	return node
 }
 
+// getFirstRepoNode returns the tree node with first created repository of the user, if any.
+func (c *Contributions) getFirstRepoNode(key string) *tview.TreeNode {
+	firstRepo := c.nodes[key].FirstRepositoryContribution
+	if firstRepo == nil {
+		return nil
+	}
+	text := " [::b]Created their first repository \U0001F389"
+	node := tview.NewTreeNode(text).SetSelectable(true)
+	name := firstRepo.CreatedRepositoryContribution.Repository.Name
+	createdAt := firstRepo.CreatedRepositoryContribution.OccurredAt.Format("Jan 02")
+	var lang string
+	if firstRepo.CreatedRepositoryContribution.Repository.PrimaryLanguage != nil {
+		langName := firstRepo.CreatedRepositoryContribution.Repository.PrimaryLanguage.Name
+		color := firstRepo.CreatedRepositoryContribution.Repository.PrimaryLanguage.Color
+		lang = fmt.Sprintf("[%s]\u25CF %s", color, langName)
+	}
+	childText := fmt.Sprintf(" [white]%s %s  [gray::d]%s", name, lang, createdAt)
+	childNode := tview.NewTreeNode(childText).SetSelectable(false)
+	node.AddChild(childNode)
+	return node
+}
+
 // getRepoNode returns the tree node with created repositories data for a given key, which is the month.
 func (c *Contributions) getRepoNode(key string) *tview.TreeNode {
 	totalRepoCount := c.nodes[key].TotalRepositoryContributions
 	if totalRepoCount == 0 {
 		return nil
+	}
+	hasFirst := c.nodes[key].FirstRepositoryContribution != nil
+	if hasFirst {
+		totalRepoCount -= 1
+		if totalRepoCount == 0 {
+			return nil
+		}
 	}
 
 	nodes := c.nodes[key].RepositoryContributions.Nodes
@@ -320,7 +370,7 @@ func (c *Contributions) getRepoNode(key string) *tview.TreeNode {
 
 		var lang string
 		if node.Repository.PrimaryLanguage != nil {
-			lang = fmt.Sprintf("[%s]● %s", node.Repository.PrimaryLanguage.Color, node.Repository.PrimaryLanguage.Name)
+			lang = fmt.Sprintf("[%s]\u25CF %s", node.Repository.PrimaryLanguage.Color, node.Repository.PrimaryLanguage.Name)
 		}
 		createdAt := node.OccurredAt.Format("Jan 02")
 		text := fmt.Sprintf(" [white]%s \t%s  [gray::d]%s", repo, lang, createdAt)
@@ -338,11 +388,37 @@ func (c *Contributions) getRepoNode(key string) *tview.TreeNode {
 
 	repoText := pluralize("repository", totalRepoCount)
 	text := fmt.Sprintf(" [::b]Created %d %s", totalRepoCount, repoText)
-	if c.nodes[key].FirstRepositoryContribution != nil {
+	if hasFirst {
 		text = fmt.Sprintf(" [::b]Created %d other %s", totalRepoCount, repoText)
 	}
 	node := tview.NewTreeNode(text).SetSelectable(true)
 	node.SetChildren(childNodes)
+	return node
+}
+
+// getFirstPullRequestNode returns the tree node with first opened pull request by the user, if any.
+func (c *Contributions) getFirstPullRequestNode(key string) *tview.TreeNode {
+	firstPullRequest := c.nodes[key].FirstPullRequestContribution
+	if firstPullRequest == nil {
+		return nil
+	}
+	name := firstPullRequest.CreatedPullRequestContribution.PullRequest.Repository.NameWithOwner
+	title := tview.Escape(firstPullRequest.CreatedPullRequestContribution.PullRequest.Title)
+	state := firstPullRequest.CreatedPullRequestContribution.PullRequest.State
+	createdAt := firstPullRequest.CreatedPullRequestContribution.OccurredAt.Format("Jan 02")
+	text := fmt.Sprintf(" [::b]Opened their first pull request on GitHub in %s \U0001F389", name)
+	node := tview.NewTreeNode(text).SetSelectable(true)
+	var childText string
+	switch state {
+	case "OPEN":
+		childText = fmt.Sprintf(" [green::d]%s  [gray::d]%s", title, createdAt)
+	case "MERGED":
+		childText = fmt.Sprintf(" [rebeccapurple::d]%s  [gray::d]%s", title, createdAt)
+	case "CLOSED":
+		childText = fmt.Sprintf(" [indianred::d]%s  [gray::d]%s", title, createdAt)
+	}
+	childNode := tview.NewTreeNode(childText).SetSelectable(false)
+	node.AddChild(childNode)
 	return node
 }
 
@@ -354,6 +430,15 @@ func (c *Contributions) getPullRequestNode(key string) *tview.TreeNode {
 	}
 
 	totalRepoCount := c.nodes[key].TotalRepositoriesWithContributedPullRequests
+	hasFirst := c.nodes[key].FirstPullRequestContribution != nil
+	hasPopular := c.nodes[key].PopularPullRequestContribution != nil
+	if hasFirst || hasPopular {
+		totalPullRequests -= 1
+		if totalPullRequests == 0 {
+			return nil
+		}
+	}
+
 	nodes := c.nodes[key].PullRequestContributionsByRepository
 	var childNodes []*tview.TreeNode
 	for _, node := range nodes {
@@ -416,6 +501,11 @@ func (c *Contributions) getPullRequestNode(key string) *tview.TreeNode {
 	prText := pluralize("pull request", totalPullRequests)
 	repoText := pluralize("repository", totalRepoCount)
 	text := fmt.Sprintf(" [::b]Opened %d %s in %d %s", totalPullRequests, prText, totalRepoCount, repoText)
+	if hasFirst || hasPopular {
+		prText = pluralize("pull request", totalPullRequests)
+		repoText = pluralize("repository", repoCount)
+		text = fmt.Sprintf(" [::b]Opened %d other %s in %d %s", totalPullRequests, prText, repoCount, repoText)
+	}
 	node := tview.NewTreeNode(text).SetSelectable(true)
 	node.SetChildren(childNodes)
 	return node
@@ -493,11 +583,44 @@ func (c *Contributions) getPullRequestReviewNode(key string) *tview.TreeNode {
 	return node
 }
 
+// getFirstIssueNode returns the tree node with first issue opened by the user, if any.
+func (c *Contributions) getFirstIssueNode(key string) *tview.TreeNode {
+	firstIssue := c.nodes[key].FirstIssueContribution
+	if firstIssue == nil {
+		return nil
+	}
+	name := firstIssue.CreatedIssueContribution.Issue.Repository.NameWithOwner
+	title := tview.Escape(firstIssue.CreatedIssueContribution.Issue.Title)
+	state := firstIssue.CreatedIssueContribution.Issue.State
+	createdAt := firstIssue.CreatedIssueContribution.OccurredAt.Format("Jan 02")
+	text := fmt.Sprintf(" [::b]Opened their first issue on GitHub in %s \U0001F389", name)
+	node := tview.NewTreeNode(text).SetSelectable(true)
+	var childText string
+	switch state {
+	case "OPEN":
+		childText = fmt.Sprintf(" [green::d]%s  [gray::d]%s", title, createdAt)
+	case "CLOSED":
+		childText = fmt.Sprintf(" [indianred::d]%s  [gray::d]%s", title, createdAt)
+	}
+	childNode := tview.NewTreeNode(childText).SetSelectable(false)
+	node.AddChild(childNode)
+	return node
+}
+
 // getIssueNode returns the tree node with issues data for a given key, which is the month.
 func (c *Contributions) getIssueNode(key string) *tview.TreeNode {
 	totalIssues := c.nodes[key].TotalIssueContributions
 	if totalIssues == 0 {
 		return nil
+	}
+
+	hasFirst := c.nodes[key].FirstIssueContribution != nil
+	hasPopular := c.nodes[key].PopularIssueContribution != nil
+	if hasFirst || hasPopular {
+		totalIssues -= 1
+		if totalIssues == 0 {
+			return nil
+		}
 	}
 
 	totalRepoCount := c.nodes[key].TotalRepositoriesWithContributedIssues
@@ -557,6 +680,11 @@ func (c *Contributions) getIssueNode(key string) *tview.TreeNode {
 	issueText := pluralize("issue", totalIssues)
 	repoText := pluralize("repository", totalRepoCount)
 	text := fmt.Sprintf(" [::b]Opened %d %s in %d %s", totalIssues, issueText, totalRepoCount, repoText)
+	if hasFirst || hasPopular {
+		issueText = pluralize("issue", totalIssues)
+		repoText = pluralize("repository", repoCount)
+		text = fmt.Sprintf(" [::b]Opened %d other %s in %d %s", totalIssues, issueText, repoCount, repoText)
+	}
 	node := tview.NewTreeNode(text).SetSelectable(true)
 	node.SetChildren(childNodes)
 	return node
@@ -592,6 +720,7 @@ func (c *Contributions) getContributionData() error {
 		if !contributions.Viewer.HasActivityInThePast {
 			break
 		}
+		contributions = contributionQuery{}
 	}
 	return nil
 }
