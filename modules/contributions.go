@@ -264,11 +264,17 @@ func (c *Contributions) display() {
 		if firstPullRequestNode := c.getFirstPullRequestNode(key); firstPullRequestNode != nil {
 			childNode.AddChild(firstPullRequestNode)
 		}
+		if popularPullRequestNode := c.getPopularPullRequestNode(key); popularPullRequestNode != nil {
+			childNode.AddChild(popularPullRequestNode)
+		}
 		if pullRequestNode := c.getPullRequestNode(key); pullRequestNode != nil {
 			childNode.AddChild(pullRequestNode)
 		}
 		if pullRequestReviewNode := c.getPullRequestReviewNode(key); pullRequestReviewNode != nil {
 			childNode.AddChild(pullRequestReviewNode)
+		}
+		if popularIssueNode := c.getPopularIssueNode(key); popularIssueNode != nil {
+			childNode.AddChild(popularIssueNode)
 		}
 		if firstIssueNode := c.getFirstIssueNode(key); firstIssueNode != nil {
 			childNode.AddChild(firstIssueNode)
@@ -407,6 +413,34 @@ func (c *Contributions) getFirstPullRequestNode(key string) *tview.TreeNode {
 	state := firstPullRequest.CreatedPullRequestContribution.PullRequest.State
 	createdAt := firstPullRequest.CreatedPullRequestContribution.OccurredAt.Format("Jan 02")
 	text := fmt.Sprintf(" [::b]Opened their first pull request on GitHub in %s \U0001F389", name)
+	node := tview.NewTreeNode(text).SetSelectable(true)
+	var childText string
+	switch state {
+	case "OPEN":
+		childText = fmt.Sprintf(" [green::d]%s  [gray::d]%s", title, createdAt)
+	case "MERGED":
+		childText = fmt.Sprintf(" [rebeccapurple::d]%s  [gray::d]%s", title, createdAt)
+	case "CLOSED":
+		childText = fmt.Sprintf(" [indianred::d]%s  [gray::d]%s", title, createdAt)
+	}
+	childNode := tview.NewTreeNode(childText).SetSelectable(false)
+	node.AddChild(childNode)
+	return node
+}
+
+// getPopularPullRequestNode returns the tree node with popular pull request created by the user, if any.
+func (c *Contributions) getPopularPullRequestNode(key string) *tview.TreeNode {
+	popularPullRequest := c.nodes[key].PopularPullRequestContribution
+	if popularPullRequest == nil {
+		return nil
+	}
+	name := popularPullRequest.PullRequest.Repository.NameWithOwner
+	commentCount := popularPullRequest.PullRequest.Comments.TotalCount
+	commentText := pluralize("comment", commentCount)
+	title := tview.Escape(popularPullRequest.PullRequest.Title)
+	state := popularPullRequest.PullRequest.State
+	createdAt := popularPullRequest.OccurredAt.Format("Jan 02")
+	text := fmt.Sprintf(" [::b]Created a pull request in %s that received %d %s \U0001F525", name, commentCount, commentText)
 	node := tview.NewTreeNode(text).SetSelectable(true)
 	var childText string
 	switch state {
@@ -594,6 +628,32 @@ func (c *Contributions) getFirstIssueNode(key string) *tview.TreeNode {
 	state := firstIssue.CreatedIssueContribution.Issue.State
 	createdAt := firstIssue.CreatedIssueContribution.OccurredAt.Format("Jan 02")
 	text := fmt.Sprintf(" [::b]Opened their first issue on GitHub in %s \U0001F389", name)
+	node := tview.NewTreeNode(text).SetSelectable(true)
+	var childText string
+	switch state {
+	case "OPEN":
+		childText = fmt.Sprintf(" [green::d]%s  [gray::d]%s", title, createdAt)
+	case "CLOSED":
+		childText = fmt.Sprintf(" [indianred::d]%s  [gray::d]%s", title, createdAt)
+	}
+	childNode := tview.NewTreeNode(childText).SetSelectable(false)
+	node.AddChild(childNode)
+	return node
+}
+
+// getPopularIssueNode returns the tree node with popular issue created by the user, if any.
+func (c *Contributions) getPopularIssueNode(key string) *tview.TreeNode {
+	popularIssue := c.nodes[key].PopularIssueContribution
+	if popularIssue == nil {
+		return nil
+	}
+	name := popularIssue.Issue.Repository.NameWithOwner
+	commentCount := popularIssue.Issue.Comments.TotalCount
+	commentText := pluralize("comment", commentCount)
+	title := tview.Escape(popularIssue.Issue.Title)
+	state := popularIssue.Issue.State
+	createdAt := popularIssue.OccurredAt.Format("Jan 02")
+	text := fmt.Sprintf(" [::b]Created an issue in %s that received %d %s \U0001F525", name, commentCount, commentText)
 	node := tview.NewTreeNode(text).SetSelectable(true)
 	var childText string
 	switch state {
