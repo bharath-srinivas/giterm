@@ -39,7 +39,7 @@ type ContributionsCollection struct {
 		}
 	}
 
-	FirstRepositoryContribution struct {
+	FirstRepositoryContribution *struct {
 		CreatedRepositoryContribution struct {
 			Repository struct {
 				Name            string
@@ -66,7 +66,7 @@ type ContributionsCollection struct {
 		}
 	} `graphql:"repositoryContributions(first: 25, excludeFirst: true)"`
 
-	FirstPullRequestContribution struct {
+	FirstPullRequestContribution *struct {
 		CreatedPullRequestContribution struct {
 			PullRequest struct {
 				Title string
@@ -76,7 +76,7 @@ type ContributionsCollection struct {
 		} `graphql:"... on CreatedPullRequestContribution"`
 	}
 
-	PopularPullRequestContribution struct {
+	PopularPullRequestContribution *struct {
 		OccurredAt  *time.Time
 		PullRequest struct {
 			Title    string
@@ -124,7 +124,7 @@ type ContributionsCollection struct {
 		}
 	}
 
-	FirstIssueContribution struct {
+	FirstIssueContribution *struct {
 		CreatedIssueContribution struct {
 			Issue struct {
 				Title string
@@ -134,7 +134,7 @@ type ContributionsCollection struct {
 		} `graphql:"... on CreatedIssueContribution"`
 	}
 
-	PopularIssueContribution struct {
+	PopularIssueContribution *struct {
 		OccurredAt *time.Time
 		Issue      struct {
 			Title    string
@@ -291,7 +291,7 @@ func (c *Contributions) getCommitNode(key string) *tview.TreeNode {
 	}
 
 	repoCount := len(nodes)
-	if totalRepos > repoCount {
+	if totalRepos > 25 && repoCount == 25 {
 		repoText := pluralize("repository", repoCount)
 		text := fmt.Sprintf("[gray::d]%d %s not shown", totalRepos-repoCount, repoText)
 		child := tview.NewTreeNode(text).SetSelectable(false)
@@ -329,7 +329,7 @@ func (c *Contributions) getRepoNode(key string) *tview.TreeNode {
 	}
 
 	repoCount := len(nodes)
-	if repoCount > totalRepoCount {
+	if totalRepoCount > 25 && repoCount == 25 {
 		repoText := pluralize("repository", repoCount)
 		text := fmt.Sprintf("[gray::d]%d %s not shown", totalRepoCount-repoCount, repoText)
 		child := tview.NewTreeNode(text).SetSelectable(false)
@@ -338,6 +338,9 @@ func (c *Contributions) getRepoNode(key string) *tview.TreeNode {
 
 	repoText := pluralize("repository", totalRepoCount)
 	text := fmt.Sprintf(" [::b]Created %d %s", totalRepoCount, repoText)
+	if c.nodes[key].FirstRepositoryContribution != nil {
+		text = fmt.Sprintf(" [::b]Created %d other %s", totalRepoCount, repoText)
+	}
 	node := tview.NewTreeNode(text).SetSelectable(true)
 	node.SetChildren(childNodes)
 	return node
@@ -403,7 +406,7 @@ func (c *Contributions) getPullRequestNode(key string) *tview.TreeNode {
 	}
 
 	repoCount := len(nodes)
-	if totalRepoCount > repoCount {
+	if totalRepoCount > 25 && repoCount == 25 {
 		repoText := pluralize("repository", repoCount)
 		text := fmt.Sprintf("[gray::d]%d %s not shown", totalRepoCount-repoCount, repoText)
 		child := tview.NewTreeNode(text).SetSelectable(false)
@@ -475,7 +478,7 @@ func (c *Contributions) getPullRequestReviewNode(key string) *tview.TreeNode {
 	}
 
 	repoCount := len(nodes)
-	if totalRepoCount > repoCount {
+	if totalRepoCount > 25 && repoCount == 25 {
 		repoText := pluralize("repository", repoCount)
 		text := fmt.Sprintf("[gray::d]%d %s not shown", totalRepoCount-repoCount, repoText)
 		child := tview.NewTreeNode(text).SetSelectable(false)
@@ -544,7 +547,7 @@ func (c *Contributions) getIssueNode(key string) *tview.TreeNode {
 	}
 
 	repoCount := len(nodes)
-	if totalRepoCount > repoCount {
+	if totalRepoCount > 25 && repoCount == 25 {
 		repoText := pluralize("repository", repoCount)
 		text := fmt.Sprintf("[gray::d]%d %s not shown", totalRepoCount-repoCount, repoText)
 		child := tview.NewTreeNode(text).SetSelectable(false)
